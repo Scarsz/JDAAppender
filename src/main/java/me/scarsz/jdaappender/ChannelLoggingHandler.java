@@ -157,7 +157,7 @@ public class ChannelLoggingHandler implements Flushable {
      * Be aware that the original channel will be <strong>deleted</strong>!
      * The new channel will <strong>not</strong> have the same channel ID.
      */
-    public void replaceChannel(@Nullable String reason) {
+    public void recreateChannel(@Nullable String reason) {
         TextChannel channel = channelSupplier.get();
         channel.createCopy()
                 .setPosition(channel.getPositionRaw())
