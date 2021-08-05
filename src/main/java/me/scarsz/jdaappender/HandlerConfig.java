@@ -20,6 +20,12 @@ public class HandlerConfig {
      * <strong>Logger mappings are implemented in the default logging prefix! Changing the prefixer will require reimplementation of logger mappings!</strong>
      */
     @Getter private final Map<String, Function<String, String>> loggerMappings = new HashMap<>();
+
+    private static final Function<String, String> friendlyMapper = s -> {
+        String[] split = s.split("\\.");
+        return split[split.length - 1];
+    };
+
     /**
      * See {@link #loggerMappings}. Shortcut for loggerMappings.put(prefix, v -> friendlyName).
      * <strong>Logger mappings are implemented in the default logging prefix! Changing the prefixer will require reimplementation of logger mappings!</strong>
@@ -28,8 +34,11 @@ public class HandlerConfig {
      * // translate "net.dv8tion.jda*" logger names to simply "JDA"
      * handlerConfig.mapLoggerName("net.dv8tion.jda", "JDA");
      *
-     * // translate loggers in a "modules" package of your app to their simple class name
-     * handlerConfig.mapLoggerNameFriendly("your.application.package.modules");
+     * // translate loggers in a "modules" package of your app to their simple class name + " module"
+     * handlerConfig.mapLoggerNameFriendly("your.application.package.modules", name -> name + " module");
+     *
+     * // translate loggers in your application to the simple class name of the logger
+     * handlerConfig.mapLoggerNameFriendly("your.application.package");
      * </pre>
      * @param prefix the logger name to match
      * @param friendlyName the friendly name to replace the logger name with
@@ -45,8 +54,11 @@ public class HandlerConfig {
      * // translate "net.dv8tion.jda*" logger names to simply "JDA"
      * handlerConfig.mapLoggerName("net.dv8tion.jda", "JDA");
      *
-     * // translate loggers in a "modules" package of your app to their simple class name
-     * handlerConfig.mapLoggerNameFriendly("your.application.package.modules");
+     * // translate loggers in a "modules" package of your app to their simple class name + " module"
+     * handlerConfig.mapLoggerNameFriendly("your.application.package.modules", name -> name + " module");
+     *
+     * // translate loggers in your application to the simple class name of the logger
+     * handlerConfig.mapLoggerNameFriendly("your.application.package");
      * </pre>
      * @param prefix the logger name to match
      * @param function the mapping function
@@ -62,16 +74,36 @@ public class HandlerConfig {
      * // translate "net.dv8tion.jda*" logger names to simply "JDA"
      * handlerConfig.mapLoggerName("net.dv8tion.jda", "JDA");
      *
-     * // translate loggers in a "modules" package of your app to their simple class name
-     * handlerConfig.mapLoggerNameFriendly("your.application.package.modules");
+     * // translate loggers in a "modules" package of your app to their simple class name + " module"
+     * handlerConfig.mapLoggerNameFriendly("your.application.package.modules", name -> name + " module");
+     *
+     * // translate loggers in your application to the simple class name of the logger
+     * handlerConfig.mapLoggerNameFriendly("your.application.package");
      * </pre>
      * @param prefix the logger name to match
      */
     public void mapLoggerNameFriendly(String prefix) {
-        loggerMappings.put(prefix, s -> {
-            String[] split = s.split("\\.");
-            return split[split.length - 1];
-        });
+        loggerMappings.put(prefix, friendlyMapper);
+    }
+    /**
+     * See {@link #loggerMappings}. Shortcut for loggerMappings.put(class prefix, class -> function(class simple name)).
+     * <strong>Logger mappings are implemented in the default logging prefix! Changing the prefixer will require reimplementation of logger mappings!</strong>
+     *
+     * <pre>
+     * // translate "net.dv8tion.jda*" logger names to simply "JDA"
+     * handlerConfig.mapLoggerName("net.dv8tion.jda", "JDA");
+     *
+     * // translate loggers in a "modules" package of your app to their simple class name + " module"
+     * handlerConfig.mapLoggerNameFriendly("your.application.package.modules", name -> name + " module");
+     *
+     * // translate loggers in your application to the simple class name of the logger
+     * handlerConfig.mapLoggerNameFriendly("your.application.package");
+     * </pre>
+     * @param prefix the logger name to match
+     * @param function the function to modify the determined friendly name
+     */
+    public void mapLoggerNameFriendly(String prefix, Function<String, String> function) {
+        loggerMappings.put(prefix, s -> function.apply(friendlyMapper.apply(s)));
     }
 
     /**
