@@ -7,10 +7,8 @@ import me.scarsz.jdaappender.adapter.Log4JLoggingAdapter;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.requests.restaction.MessageAction;
-import org.apache.logging.log4j.LogManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.slf4j.impl.StaticLoggerBinder;
 
 import javax.annotation.CheckReturnValue;
 import java.io.Flushable;
@@ -182,7 +180,7 @@ public class ChannelLoggingHandler implements Flushable {
     public ChannelLoggingHandler attach() {
         // slf4j?
         try {
-            Class<?> logFactoryClass = Class.forName(StaticLoggerBinder.getSingleton().getLoggerFactoryClassStr());
+            Class<?> logFactoryClass = Class.forName(org.slf4j.impl.StaticLoggerBinder.getSingleton().getLoggerFactoryClassStr());
             switch (logFactoryClass.getSimpleName()) {
                 case "JDK14LoggerFactory": return attachJavaLogging();
                 //TODO more SLF4J implementations
@@ -225,7 +223,7 @@ public class ChannelLoggingHandler implements Flushable {
     }
     public ChannelLoggingHandler attachLog4jLogging() {
         Log4JLoggingAdapter adapter = new Log4JLoggingAdapter(this);
-        org.apache.logging.log4j.core.Logger rootLogger = (org.apache.logging.log4j.core.Logger) LogManager.getRootLogger();
+        org.apache.logging.log4j.core.Logger rootLogger = (org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager.getRootLogger();
         rootLogger.addAppender(adapter);
         detachRunnables.add(() -> rootLogger.removeAppender(adapter));
         return this;
