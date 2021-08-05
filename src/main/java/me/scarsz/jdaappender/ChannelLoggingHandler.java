@@ -2,8 +2,6 @@ package me.scarsz.jdaappender;
 
 import lombok.Getter;
 import me.scarsz.jdaappender.adapter.StandardLoggingAdapter;
-import me.scarsz.jdaappender.adapter.slf4j.JavaLoggingAdapter;
-import me.scarsz.jdaappender.adapter.Log4JLoggingAdapter;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.requests.restaction.MessageAction;
@@ -216,13 +214,13 @@ public class ChannelLoggingHandler implements Flushable {
         return this;
     }
     public ChannelLoggingHandler attachJavaLogging() {
-        JavaLoggingAdapter adapter = new JavaLoggingAdapter(this);
+        me.scarsz.jdaappender.adapter.slf4j.JavaLoggingAdapter adapter = new me.scarsz.jdaappender.adapter.slf4j.JavaLoggingAdapter(this);
         java.util.logging.Logger.getLogger("").addHandler(adapter);
         detachRunnables.add(() -> java.util.logging.Logger.getLogger("").removeHandler(adapter));
         return this;
     }
     public ChannelLoggingHandler attachLog4jLogging() {
-        Log4JLoggingAdapter adapter = new Log4JLoggingAdapter(this);
+        me.scarsz.jdaappender.adapter.Log4JLoggingAdapter adapter = new me.scarsz.jdaappender.adapter.Log4JLoggingAdapter(this);
         org.apache.logging.log4j.core.Logger rootLogger = (org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager.getRootLogger();
         rootLogger.addAppender(adapter);
         detachRunnables.add(() -> rootLogger.removeAppender(adapter));
