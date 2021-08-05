@@ -125,7 +125,7 @@ public class ChannelLoggingHandler implements Flushable {
     }
 
     @CheckReturnValue
-    public MessageAction updateMessage() {
+    private MessageAction updateMessage() {
         if (stack.size() == 0) throw new IllegalStateException("No messages on stack");
 
         StringJoiner joiner = new StringJoiner("\n");
