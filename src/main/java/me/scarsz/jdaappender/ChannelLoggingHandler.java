@@ -93,6 +93,11 @@ public class ChannelLoggingHandler implements Flushable {
         }
     }
 
+    /**
+     * Whether the given {@link LogItem} is able to fit in the current {@link #stack}. Internal usage.
+     * @param logItem the log item to check for fitment of
+     * @return true if the log item will fit, false if it won't and a new stack + message will be started to accommodate
+     */
     public boolean canFit(LogItem logItem) {
         int lengthSum = 0;
         for (LogItem item : stack) {
