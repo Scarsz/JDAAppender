@@ -1,4 +1,4 @@
-package me.scarsz.jdaappender.adapter;
+package me.scarsz.jdaappender.adapter.slf4j;
 
 import me.scarsz.jdaappender.ChannelLoggingHandler;
 import me.scarsz.jdaappender.LogItem;
@@ -35,7 +35,7 @@ public class JavaLoggingAdapter extends Handler {
                     record.getLoggerName(),
                     record.getMillis(),
                     level,
-                    record.getMessage(),
+                    LogItem.stripColors(record.getMessage()),
                     record.getThrown()
             ));
         }

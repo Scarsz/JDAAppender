@@ -1,12 +1,11 @@
 package me.your.app;
 
 import me.scarsz.jdaappender.ChannelLoggingHandler;
-import me.scarsz.jdaappender.LogItem;
-import me.scarsz.jdaappender.LogLevel;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 
 import javax.security.auth.login.LoginException;
+import java.io.PrintStream;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class RandomDataExample {
@@ -21,7 +20,7 @@ public class RandomDataExample {
             handlerConfig.setSplitCodeBlockForLinks(false);
             handlerConfig.setAllowLinkEmbeds(true);
             handlerConfig.mapLoggerName("net.dv8tion.jda", "JDA");
-        }).attachJavaLogging().schedule();
+        }).attachStandardLogging().schedule();
 
         // enqueue a bunch of random log messages
         int count = ThreadLocalRandom.current().nextInt(100, 500);
@@ -29,15 +28,13 @@ public class RandomDataExample {
             double random = ThreadLocalRandom.current().nextDouble(1);
             String randomCharacters = randomAlphanumeric(100, 250);
 
-            handler.enqueue(new LogItem(
-                    "Logger name here",
-                    System.currentTimeMillis(),
-                    random < .5 ? LogLevel.INFO : random < .8 ? LogLevel.WARN : LogLevel.ERROR,
+            PrintStream stream = random > .5 ? System.out : System.err;
+            stream.println(
                     "Test message " + (i + 1) + ": " + (ThreadLocalRandom.current().nextDouble() > .9
                             ? "https://lorem.ipsum/#" + randomCharacters.substring(0, ThreadLocalRandom.current().nextInt(100))
-                            : "data[" + randomCharacters.length() + "] " + randomCharacters),
-                    null
-            ));
+                            : "data[" + randomCharacters.length() + "] " + randomCharacters)
+            );
+
             if (ThreadLocalRandom.current().nextDouble() < .5) {
                 Thread.sleep(1000);
             }

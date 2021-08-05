@@ -1,15 +1,20 @@
 package me.scarsz.jdaappender;
 
 import lombok.Getter;
-import me.scarsz.jdaappender.adapter.JavaLoggingAdapter;
+import me.scarsz.jdaappender.adapter.StandardLoggingAdapter;
+import me.scarsz.jdaappender.adapter.slf4j.JavaLoggingAdapter;
+import me.scarsz.jdaappender.adapter.Log4JLoggingAdapter;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.requests.restaction.MessageAction;
+import org.apache.logging.log4j.LogManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.impl.StaticLoggerBinder;
 
 import javax.annotation.CheckReturnValue;
 import java.io.Flushable;
+import java.io.PrintStream;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledFuture;
@@ -48,11 +53,12 @@ public class ChannelLoggingHandler implements Flushable {
      */
     private static final Pattern URL_PATTERN = Pattern.compile("https?://\\S+");
 
-    private final HandlerConfig config = new HandlerConfig();
-    private final Deque<LogItem> messageQueue = new LinkedList<>();
-    private final Set<LogItem> stack = new LinkedHashSet<>();
+    @Getter private final HandlerConfig config = new HandlerConfig();
+    @Getter private final Deque<LogItem> messageQueue = new LinkedList<>();
+    @Getter private final Set<LogItem> stack = new LinkedHashSet<>();
+    @Getter private Supplier<TextChannel> channelSupplier;
+    private final Set<Runnable> detachRunnables = new HashSet<>();
     private Message currentMessage = null;
-    private Supplier<TextChannel> channelSupplier;
 
     public ChannelLoggingHandler(@NotNull Supplier<TextChannel> channelSupplier) {
         this(channelSupplier, null);
@@ -168,8 +174,55 @@ public class ChannelLoggingHandler implements Flushable {
                 .complete();
     }
 
+    public ChannelLoggingHandler attach() {
+        // slf4j?
+        try {
+            Class<?> logFactoryClass = Class.forName(StaticLoggerBinder.getSingleton().getLoggerFactoryClassStr());
+            switch (logFactoryClass.getSimpleName()) {
+                case "JDK14LoggerFactory": return attachJavaLogging();
+                //TODO more SLF4J implementations
+            }
+        } catch (Throwable ignored) {}
+
+        // log4j?
+        try {
+            Class.forName("org.apache.logging.log4j.core.Logger");
+            return attachLog4jLogging();
+        } catch (Throwable ignored) {}
+
+        return attachStandardLogging();
+    }
+    public void detach() {
+        Iterator<Runnable> iterator = detachRunnables.iterator();
+        while (iterator.hasNext()) {
+            Runnable runnable = iterator.next();
+            runnable.run();
+            iterator.remove();
+        }
+    }
+    public ChannelLoggingHandler attachStandardLogging() {
+        StandardLoggingAdapter adapter = new StandardLoggingAdapter(this);
+        PrintStream originalOut = System.out;
+        PrintStream originalErr = System.err;
+        System.setOut(adapter.getOutStream());
+        System.setErr(adapter.getErrStream());
+        detachRunnables.add(() -> {
+            System.setOut(originalOut);
+            System.setErr(originalErr);
+        });
+        return this;
+    }
     public ChannelLoggingHandler attachJavaLogging() {
-        java.util.logging.Logger.getLogger("").addHandler(new JavaLoggingAdapter(this));
+        JavaLoggingAdapter adapter = new JavaLoggingAdapter(this);
+        java.util.logging.Logger.getLogger("").addHandler(adapter);
+        detachRunnables.add(() -> java.util.logging.Logger.getLogger("").removeHandler(adapter));
+        return this;
+    }
+    public ChannelLoggingHandler attachLog4jLogging() {
+        Log4JLoggingAdapter adapter = new Log4JLoggingAdapter(this);
+        org.apache.logging.log4j.core.Logger rootLogger = (org.apache.logging.log4j.core.Logger) LogManager.getRootLogger();
+        rootLogger.addAppender(adapter);
+        detachRunnables.add(() -> rootLogger.removeAppender(adapter));
         return this;
     }
 

@@ -9,7 +9,7 @@ Using default values:
 
 ```java
 ChannelLoggingHandler handler = new ChannelLoggingHandler(() -> jda.getTextChannelById(System.getenv("CHANNEL")))
-        .attachJavaLogging() // attach to java.util.logging
+        .attach() // attach to SLF4J JDK logging if present, else Log4j if present, else standard out/err
         .schedule(); // schedule handler to flush output asynchronously every second
 ```
 
@@ -21,7 +21,7 @@ ChannelLoggingHandler handler = new ChannelLoggingHandler(() -> jda.getTextChann
     config.setSplitCodeBlockForLinks(false); // split the output code blocks when a link is present, default false
     config.setAllowLinkEmbeds(true); // when splitting code blocks for links, allow the links to have an embed, default true
     config.mapLoggerName("net.dv8tion.jda", "JDA"); // add a mapping for logger names "net.dv8tion.jda*" to just be "JDA"
-}).attachJavaLogging().schedule();
+}).attach().schedule();
 ```
 
 # Artifact
@@ -41,8 +41,8 @@ ChannelLoggingHandler handler = new ChannelLoggingHandler(() -> jda.getTextChann
 
 # Using with SLF4J-backed apps with minimal effort (JDA, ...)
 
-Add `slf4j-jdk14` as a dependency. This will forward SLF4J messages to java.util.logging and can be
-picked up with `ChannelLoggingHandler#attachJavaLogging`.
+Use `slf4j-jdk14` as your SLF4J logging backend. This will forward SLF4J messages to java.util.logging and can be
+picked up by JDAAppender with `ChannelLoggingHandler#attachJavaLogging`.
 
 ```xml
 <dependency>
