@@ -31,9 +31,18 @@ public class LogItem {
      * @return the human-readable, formatted line representing this LogItem
      */
     protected String format(@NotNull HandlerConfig config) {
-        return (config.getPrefixer() != null ? config.getPrefixer().apply(this) : "")
-                + message
-                + (config.getSuffixer() != null ? config.getSuffixer().apply(this) : "");
+        StringBuilder builder = new StringBuilder();
+
+        if (config.getPrefixer() != null) builder.append(config.getPrefixer().apply(this));
+        builder.append(message);
+        if (config.getSuffixer() != null) builder.append(config.getSuffixer().apply(this));
+        if (throwable != null) {
+            for (StackTraceElement element : throwable.getStackTrace()) {
+                builder.append(element.toString());
+            }
+        }
+
+        return builder.toString();
     }
 
     /**
