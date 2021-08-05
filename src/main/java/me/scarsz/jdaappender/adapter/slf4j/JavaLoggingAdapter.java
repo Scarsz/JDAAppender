@@ -30,8 +30,6 @@ public class JavaLoggingAdapter extends Handler {
                                 ? LogLevel.ERROR
                                 : null;
 
-        System.out.println(record.getLoggerName());
-
         if (level != null) {
             handler.enqueue(new LogItem(
                     record.getLoggerName(),
