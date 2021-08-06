@@ -178,6 +178,12 @@ public class ChannelLoggingHandler implements Flushable {
     }
 
     public ChannelLoggingHandler attach() {
+        // log4j?
+        try {
+            Class.forName("org.apache.logging.log4j.core.Logger");
+            return attachLog4jLogging();
+        } catch (Throwable ignored) {}
+
         // slf4j?
         try {
             Class<?> logFactoryClass = Class.forName(org.slf4j.impl.StaticLoggerBinder.getSingleton().getLoggerFactoryClassStr());
@@ -185,12 +191,6 @@ public class ChannelLoggingHandler implements Flushable {
                 case "JDK14LoggerFactory": return attachJavaLogging();
                 //TODO more SLF4J implementations
             }
-        } catch (Throwable ignored) {}
-
-        // log4j?
-        try {
-            Class.forName("org.apache.logging.log4j.core.Logger");
-            return attachLog4jLogging();
         } catch (Throwable ignored) {}
 
         return attachStandardLogging();
