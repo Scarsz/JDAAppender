@@ -1,6 +1,7 @@
 package me.scarsz.jdaappender;
 
 import lombok.Getter;
+import lombok.SneakyThrows;
 import me.scarsz.jdaappender.adapter.StandardLoggingAdapter;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
@@ -11,6 +12,7 @@ import org.jetbrains.annotations.Nullable;
 import javax.annotation.CheckReturnValue;
 import java.io.Flushable;
 import java.io.PrintStream;
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledFuture;
@@ -219,11 +221,26 @@ public class ChannelLoggingHandler implements Flushable {
         detachRunnables.add(() -> java.util.logging.Logger.getLogger("").removeHandler(adapter));
         return this;
     }
+    @SneakyThrows
     public ChannelLoggingHandler attachLog4jLogging() {
-        me.scarsz.jdaappender.adapter.Log4JLoggingAdapter adapter = new me.scarsz.jdaappender.adapter.Log4JLoggingAdapter(this);
-        org.apache.logging.log4j.core.Logger rootLogger = (org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager.getRootLogger();
-        rootLogger.addAppender(adapter);
-        detachRunnables.add(() -> rootLogger.removeAppender(adapter));
+        Object rootLogger = Class.forName("org.apache.logging.log4j.LogManager").getMethod("getRootLogger").invoke(null);
+        Method addAppenderMethod = Arrays.stream(rootLogger.getClass().getMethods())
+                .filter(method -> method.getName().equals("addAppender"))
+                .findFirst().orElseThrow(() -> new RuntimeException("No RootLogger#addAppender method"));
+        Method removeAppenderMethod = Arrays.stream(rootLogger.getClass().getMethods())
+                .filter(method -> method.getName().equals("removeAppender"))
+                .findFirst().orElseThrow(() -> new RuntimeException("No RootLogger#removeAppender method"));
+
+        Object adapter = Class.forName("me.scarsz.jdaappender.adapter.Log4JLoggingAdapter").getConstructor(ChannelLoggingHandler.class).newInstance(this);
+        addAppenderMethod.invoke(rootLogger, adapter);
+
+        detachRunnables.add(() -> {
+            try {
+                removeAppenderMethod.invoke(rootLogger, adapter);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
         return this;
     }
 
