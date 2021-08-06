@@ -2,6 +2,7 @@ package me.scarsz.jdaappender;
 
 import lombok.Getter;
 import lombok.Setter;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
@@ -110,16 +111,21 @@ public class HandlerConfig {
      * Function to include any relevant details as a prefix to a {@link LogItem}'s content when formatting.
      * Default equates to "[LEVEL Logger] ".
      */
-    @Getter @Setter @Nullable private Function<LogItem, String> prefixer = item -> {
-        String loggerName = item.getLogger();
+    @Getter @Setter @Nullable private Function<LogItem, String> prefixer = item -> "[" + item.getLevel().name() + " " + resolveLoggerName(item.getLogger()) + "] ";
+
+    /**
+     * Resolve the given logger name with any configured logger name mappings
+     * @param name the logger name to resolve mappings for
+     * @return the resolved logger name if mapped, same as input otherwise
+     */
+    public String resolveLoggerName(@NotNull String name) {
         for (Map.Entry<String, Function<String, String>> entry : loggerMappings.entrySet()) {
-            if (loggerName.startsWith(entry.getKey())) {
-                loggerName = entry.getValue().apply(loggerName);
-                break;
+            if (name.startsWith(entry.getKey())) {
+                return entry.getValue().apply(name);
             }
         }
-        return "[" + item.getLevel().name() + " " + loggerName + "] ";
-    };
+        return name;
+    }
 
     /**
      * Function to include any relevant details as a suffix to a {@link LogItem}'s content when formatting.
