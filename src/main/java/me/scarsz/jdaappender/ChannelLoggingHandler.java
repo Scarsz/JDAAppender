@@ -112,7 +112,7 @@ public class ChannelLoggingHandler implements Flushable {
             lengthSum += "- ".length() * stack.size(); // language symbols
         }
 
-        if (config.isAllowLinkEmbeds()) {
+        if (config.isSplitCodeBlockForLinks()) {
             lengthSum += "```".length() * 2;
             lengthSum += "\n".length() * 2;
             if (config.isColored()) {
@@ -129,7 +129,7 @@ public class ChannelLoggingHandler implements Flushable {
 
         StringJoiner joiner = new StringJoiner("\n");
         for (LogItem item : stack) {
-            boolean willSplit = config.isAllowLinkEmbeds() && URL_PATTERN.matcher(item.getMessage()).find();
+            boolean willSplit = config.isSplitCodeBlockForLinks() && URL_PATTERN.matcher(item.getMessage()).find();
 
             String formatted = item.format(config);
 
