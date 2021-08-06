@@ -3,6 +3,7 @@ package me.scarsz.jdaappender;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import me.scarsz.jdaappender.adapter.StandardLoggingAdapter;
+import me.scarsz.jdaappender.adapter.slf4j.JavaLoggingAdapter;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.requests.restaction.MessageAction;
@@ -216,7 +217,7 @@ public class ChannelLoggingHandler implements Flushable {
         return this;
     }
     public ChannelLoggingHandler attachJavaLogging() {
-        me.scarsz.jdaappender.adapter.slf4j.JavaLoggingAdapter adapter = new me.scarsz.jdaappender.adapter.slf4j.JavaLoggingAdapter(this);
+        JavaLoggingAdapter adapter = new JavaLoggingAdapter(this);
         java.util.logging.Logger.getLogger("").addHandler(adapter);
         detachRunnables.add(() -> java.util.logging.Logger.getLogger("").removeHandler(adapter));
         return this;
