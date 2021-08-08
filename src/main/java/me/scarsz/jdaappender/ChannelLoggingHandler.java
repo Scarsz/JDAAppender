@@ -44,7 +44,7 @@ public class ChannelLoggingHandler implements Flushable {
      * @return this channel logging handler
      */
     public ChannelLoggingHandler schedule(long period, @NotNull TimeUnit unit) {
-        shutdownExecutor(); // Stop the existing executor
+        shutdownExecutor(); // Stop the existing executor, if one exists
         if (executor == null) {
             executor = Executors.newSingleThreadScheduledExecutor();
         }
