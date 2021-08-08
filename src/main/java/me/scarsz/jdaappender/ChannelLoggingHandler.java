@@ -17,6 +17,7 @@ import java.io.Flushable;
 import java.io.PrintStream;
 import java.util.*;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -25,6 +26,7 @@ import java.util.regex.Pattern;
 
 public class ChannelLoggingHandler implements Flushable {
 
+    @Getter private ScheduledExecutorService executor;
     @Getter private ScheduledFuture<?> scheduledFuture;
 
     /**
@@ -42,8 +44,12 @@ public class ChannelLoggingHandler implements Flushable {
      * @return this channel logging handler
      */
     public ChannelLoggingHandler schedule(long period, @NotNull TimeUnit unit) {
+        shutdownExecutor(); // Stop the existing executor
+        if (executor == null) {
+            executor = Executors.newSingleThreadScheduledExecutor();
+        }
         if (scheduledFuture == null) {
-            scheduledFuture = Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(this::flush, period, period, unit);
+            scheduledFuture = executor.scheduleAtFixedRate(this::flush, period, period, unit);
         }
         return this;
     }
@@ -177,6 +183,32 @@ public class ChannelLoggingHandler implements Flushable {
                     return channel.delete().reason(reason);
                 })
                 .complete();
+    }
+
+    /**
+     * Shutdown the internal executor, if active.
+     * @see #schedule()
+     * @see #schedule(long, TimeUnit)
+     */
+    public void shutdownExecutor() {
+        if (scheduledFuture != null) {
+            scheduledFuture.cancel(true);
+            scheduledFuture = null;
+        }
+        if (executor != null) {
+            executor.shutdown();
+            executor = null;
+        }
+    }
+
+    /**
+     * Shuts down the internal executor, and detaches attached loggers.
+     * @see #shutdownExecutor()
+     * @see #detach()
+     */
+    public void shutdown() {
+        detach();
+        shutdownExecutor();
     }
 
     public ChannelLoggingHandler attach() {
