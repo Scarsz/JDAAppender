@@ -63,8 +63,8 @@ public class LogItem {
      * {@link Message#MAX_CONTENT_LENGTH}
      * @param config the appender config
      * @param count the maximum amount of {@link LogItem}s to clip from this message
-     * @return a new {@link LogItem} containing excess characters from this LogItem,
-     *         null if no clipping was performed
+     * @return a set containing {@link LogItem}s formed from excess characters in this LogItem,
+     *         empty set if no clipping was performed
      */
     protected Set<LogItem> clip(@NotNull HandlerConfig config, int count) {
         Set<LogItem> items = new LinkedHashSet<>();
