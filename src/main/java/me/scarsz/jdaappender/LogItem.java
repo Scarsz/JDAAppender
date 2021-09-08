@@ -4,6 +4,9 @@ import lombok.Getter;
 import net.dv8tion.jda.api.entities.Message;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -52,14 +55,30 @@ public class LogItem {
      *         null if no clipping was performed
      */
     protected LogItem clip(@NotNull HandlerConfig config) {
-        int fullLength = format(config).length();
-        if (fullLength >= Message.MAX_CONTENT_LENGTH - 15) {
-            String original = message;
-            message = substring(message, 0, fullLength);
-            return new LogItem(logger, timestamp, level, substring(original, fullLength), throwable);
-        } else {
-            return null;
+        Iterator<LogItem> clip = clip(config, 1).iterator();
+        return clip.hasNext() ? clip.next() : null;
+    }
+    /**
+     * Clip the log item's message content into a maximum of specified number of log items, if it exceeds
+     * {@link Message#MAX_CONTENT_LENGTH}
+     * @param config the appender config
+     * @param count the maximum amount of {@link LogItem}s to clip from this message
+     * @return a new {@link LogItem} containing excess characters from this LogItem,
+     *         null if no clipping was performed
+     */
+    protected Set<LogItem> clip(@NotNull HandlerConfig config, int count) {
+        Set<LogItem> items = new LinkedHashSet<>();
+        for (int i = 0; i < count; i++) {
+            int fullLength = format(config).length();
+            if (fullLength >= Message.MAX_CONTENT_LENGTH - 15) {
+                String original = message;
+                message = substring(message, 0, fullLength);
+                items.add(new LogItem(logger, timestamp, level, substring(original, fullLength), throwable));
+            } else {
+                break;
+            }
         }
+        return items;
     }
 
     /**

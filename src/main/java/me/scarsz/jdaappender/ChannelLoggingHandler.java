@@ -74,9 +74,8 @@ public class ChannelLoggingHandler implements Flushable {
     }
 
     public void enqueue(LogItem item) {
-        LogItem overflow = item.clip(config);
         messageQueue.add(item);
-        if (overflow != null) enqueue(overflow);
+        messageQueue.addAll(item.clip(config, 5));
     }
 
     @Override
