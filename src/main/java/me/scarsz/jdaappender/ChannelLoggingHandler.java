@@ -74,8 +74,9 @@ public class ChannelLoggingHandler implements Flushable {
     }
 
     public void enqueue(LogItem item) {
+        Set<LogItem> clipped = item.clip(config, 4);
         messageQueue.add(item);
-        messageQueue.addAll(item.clip(config, 5));
+        messageQueue.addAll(clipped);
     }
 
     @Override
