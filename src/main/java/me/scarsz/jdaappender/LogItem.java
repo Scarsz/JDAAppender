@@ -1,6 +1,8 @@
 package me.scarsz.jdaappender;
 
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.Setter;
 import net.dv8tion.jda.api.entities.Message;
 import org.jetbrains.annotations.NotNull;
 
@@ -19,7 +21,7 @@ public class LogItem {
     @Getter private final String logger;
     @Getter private final long timestamp;
     @Getter private final LogLevel level;
-    @Getter protected String message;
+    @Getter @Setter(AccessLevel.PACKAGE) private String message;
     @Getter private final Throwable throwable;
 
     public LogItem(String logger, long timestamp, LogLevel level, String message, Throwable throwable) {

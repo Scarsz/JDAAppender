@@ -88,7 +88,7 @@ public class ChannelLoggingHandler implements Flushable {
         // allow transformers to modify log message if no filters denied it
         for (Map.Entry<Predicate<LogItem>, Function<String, String>> entry : config.getMessageTransformers().entrySet()) {
             if (entry.getKey().test(item)) {
-                item.message = entry.getValue().apply(item.getMessage());
+                item.setMessage(entry.getValue().apply(item.getMessage()));
             }
         }
 
