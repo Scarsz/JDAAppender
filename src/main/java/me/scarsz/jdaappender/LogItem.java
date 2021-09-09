@@ -14,6 +14,8 @@ import java.util.regex.Pattern;
  */
 public class LogItem {
 
+    private static final int CLIPPING_CUTOFF = Message.MAX_CONTENT_LENGTH - 15;
+
     @Getter private final String logger;
     @Getter private final long timestamp;
     @Getter private final LogLevel level;
@@ -69,11 +71,11 @@ public class LogItem {
     protected Set<LogItem> clip(@NotNull HandlerConfig config, int count) {
         Set<LogItem> items = new LinkedHashSet<>();
         for (int i = 0; i < count; i++) {
-            int fullLength = format(config).length();
-            if (fullLength >= Message.MAX_CONTENT_LENGTH - 15) {
+            int formattedLength = getFormattedLength(config);
+            if (formattedLength >= CLIPPING_CUTOFF) {
                 String original = message;
-                message = substring(message, 0, fullLength);
-                items.add(new LogItem(logger, timestamp, level, substring(original, fullLength), throwable));
+                message = substring(message, 0, CLIPPING_CUTOFF);
+                items.add(new LogItem(logger, timestamp, level, substring(original, CLIPPING_CUTOFF), throwable));
             } else {
                 break;
             }
@@ -97,6 +99,10 @@ public class LogItem {
         if (start < 0) start = 0;
         if (end > str.length()) end = str.length();
         return start > end ? "" : str.substring(start, end);
+    }
+
+    public int getFormattedLength(HandlerConfig config) {
+        return format(config).length();
     }
 
 }
