@@ -162,7 +162,7 @@ public class HandlerConfig {
             }
         }
 
-        return resolved != null ? resolved : null;
+        return resolved;
     }
 
     /**
