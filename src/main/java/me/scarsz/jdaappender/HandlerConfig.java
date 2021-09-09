@@ -20,7 +20,7 @@ public class HandlerConfig {
      * Used to provide a more user-friendly name for a logger, such as translating "net.dv8tion.jda" to "JDA".
      * <strong>Logger mappings are implemented in the default logging prefix! Changing the prefixer will require reimplementation of logger mappings!</strong>
      */
-    @Getter private final Map<String, Function<String, String>> loggerMappings = new HashMap<>();
+    @Getter private final Map<String, Function<String, String>> loggerMappings = new LinkedHashMap<>();
 
     private static final Function<String, String> friendlyMapper = s -> {
         String[] split = s.split("\\.");
