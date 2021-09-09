@@ -19,7 +19,7 @@ public class LogItem {
     @Getter private final String logger;
     @Getter private final long timestamp;
     @Getter private final LogLevel level;
-    @Getter private String message;
+    @Getter protected String message;
     @Getter private final Throwable throwable;
 
     public LogItem(String logger, long timestamp, LogLevel level, String message, Throwable throwable) {

@@ -20,6 +20,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
@@ -74,7 +76,23 @@ public class ChannelLoggingHandler implements Flushable {
     }
 
     public void enqueue(LogItem item) {
-        Set<LogItem> clipped = item.clip(config, 4);
+        if (config.resolveLoggerName(item.getLogger()) == null) return;
+
+        // check for any filtering transformers
+        for (Map.Entry<Predicate<LogItem>, Function<String, String>> entry : config.getMessageTransformers().entrySet()) {
+            if (entry.getKey().test(item) && entry.getValue().apply(item.getMessage()) == null) {
+                return;
+            }
+        }
+
+        // allow transformers to modify log message if no filters denied it
+        for (Map.Entry<Predicate<LogItem>, Function<String, String>> entry : config.getMessageTransformers().entrySet()) {
+            if (entry.getKey().test(item)) {
+                item.message = entry.getValue().apply(item.getMessage());
+            }
+        }
+
+        Set<LogItem> clipped = item.clip(config, (int) (Math.ceil((double) (10_000 - Message.MAX_CONTENT_LENGTH) / Message.MAX_CONTENT_LENGTH)));
         messageQueue.add(item);
         messageQueue.addAll(clipped);
     }

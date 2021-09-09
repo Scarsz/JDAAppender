@@ -5,9 +5,10 @@ import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * Configuration for the associated {@link ChannelLoggingHandler}
@@ -16,8 +17,32 @@ import java.util.function.Function;
 public class HandlerConfig {
 
     /**
+     * Message transformers that will be used to test incoming {@link LogItem}s before they are put in the queue.
+     * Predicates should return {@code false} if it is neutral in respect to the LogItem; return {@code true} when the item should be modified/denied.
+     * Can be used to block certain LogItems from being forwarded if, for example, it contains an unwanted message.
+     */
+    @Getter private final Map<Predicate<LogItem>, Function<String, String>> messageTransformers = new LinkedHashMap<>();
+
+    /**
+     * Adds a message transformer that will deny messages when the specified {@link Predicate} is {@code true}.
+     * @param filter the predicate to filter {@link LogItem}s by
+     */
+    public void addFilter(Predicate<LogItem> filter) {
+        messageTransformers.put(filter, s -> null);
+    }
+
+    /**
+     * Adds a message transformer that will modify messages when the specified {@link Predicate} is {@code true}.
+     * @param filter the predicate to filter {@link LogItem}s by
+     */
+    public void addTransformer(Predicate<LogItem> filter, Function<String, String> transformer) {
+        messageTransformers.put(filter, transformer);
+    }
+
+    /**
      * Mappings representing a logger name prefix and associated Functions to transform those logger names.
      * Used to provide a more user-friendly name for a logger, such as translating "net.dv8tion.jda" to "JDA".
+     * A logger name mapping may return {@code null} if messages from the logger should be ignored.
      * <strong>Logger mappings are implemented in the default logging prefix! Changing the prefixer will require reimplementation of logger mappings!</strong>
      */
     @Getter private final Map<String, Function<String, String>> loggerMappings = new LinkedHashMap<>();
@@ -106,6 +131,14 @@ public class HandlerConfig {
     public void mapLoggerNameFriendly(String prefix, Function<String, String> function) {
         loggerMappings.put(prefix, s -> function.apply(friendlyMapper.apply(s)));
     }
+    /**
+     * See {@link #loggerMappings}. Ignores messages from the specified logger prefix. Shortcut for loggerMappings.put(prefix, v -> null).
+     * <strong>Logger mappings are implemented in the default logging prefix! Changing the prefixer will require reimplementation of logger mappings!</strong>
+     * @param prefix the logger name prefix to ignore
+     */
+    public void ignoreLoggerName(String prefix) {
+        loggerMappings.put(prefix, s -> null);
+    }
 
     /**
      * Function to include any relevant details as a prefix to a {@link LogItem}'s content when formatting.
@@ -116,15 +149,20 @@ public class HandlerConfig {
     /**
      * Resolve the given logger name with any configured logger name mappings
      * @param name the logger name to resolve mappings for
-     * @return the resolved logger name if mapped, same as input otherwise
+     * @return if the logger name has been mapped to blank/null: null.
+     * Otherwise, the resolved logger name if mapped, else same as input
      */
-    public String resolveLoggerName(@NotNull String name) {
+    public @Nullable String resolveLoggerName(@NotNull String name) {
+        String resolved = name;
+
         for (Map.Entry<String, Function<String, String>> entry : loggerMappings.entrySet()) {
             if (name.startsWith(entry.getKey())) {
-                return entry.getValue().apply(name);
+                resolved = entry.getValue().apply(name);
+                break;
             }
         }
-        return name;
+
+        return resolved != null ? resolved : null;
     }
 
     /**
