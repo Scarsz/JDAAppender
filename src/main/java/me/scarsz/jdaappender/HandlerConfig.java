@@ -191,4 +191,17 @@ public class HandlerConfig {
      */
     @Getter @Setter private boolean colored = true;
 
+
+    /**
+     * Check how many characters that prefix/suffix formatting takes up for the given LogItem
+     * @param logItem the log item to apply prefixes and suffixes for
+     * @return length of prefixes and suffixes
+     */
+    int getFormattingLength(LogItem logItem) {
+        int length = 0;
+        if (prefixer != null) length += prefixer.apply(logItem).length();
+        if (suffixer != null) length += suffixer.apply(logItem).length();
+        return length;
+    }
+
 }

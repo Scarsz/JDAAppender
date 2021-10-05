@@ -109,11 +109,13 @@ public class ChannelLoggingHandler implements Flushable {
         if (loggingChannel != null) {
             LogItem logItem;
             while ((logItem = messageQueue.poll()) != null) {
-                if (logItem.getFormattedLength(config) >= Message.MAX_CONTENT_LENGTH - 15) {
-                    throw new IllegalStateException("Log item longer than Discord's max content length");
+                if (logItem.getFormattedLength(config) > LogItem.CLIPPING_MAX_LENGTH) {
+                    throw new IllegalStateException("Log item longer than Discord's max content length: " + logItem);
                 }
 
                 if (!canFit(logItem)) {
+                    if (stack.size() == 0) throw new IllegalStateException("Can't fit LogItem into empty stack: " + logItem);
+
                     updateMessage().complete();
                     currentMessage = null;
                     stack.clear();
