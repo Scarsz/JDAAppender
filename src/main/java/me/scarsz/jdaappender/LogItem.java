@@ -16,7 +16,7 @@ import java.util.regex.Pattern;
  */
 public class LogItem {
 
-    private static final int CLIPPING_CUTOFF = Message.MAX_CONTENT_LENGTH - 15;
+    public static final int CLIPPING_MAX_LENGTH = Message.MAX_CONTENT_LENGTH - 20;
 
     @Getter private final String logger;
     @Getter private final long timestamp;
@@ -66,22 +66,31 @@ public class LogItem {
      * Clip the log item's message content into a maximum of specified number of log items, if it exceeds
      * {@link Message#MAX_CONTENT_LENGTH}
      * @param config the appender config
-     * @param count the maximum amount of {@link LogItem}s to clip from this message
+     * @param max the maximum amount of {@link LogItem}s to clip from this message
      * @return a set containing {@link LogItem}s formed from excess characters in this LogItem,
      *         empty set if no clipping was performed
      */
-    protected Set<LogItem> clip(@NotNull HandlerConfig config, int count) {
+    protected Set<LogItem> clip(@NotNull HandlerConfig config, int max) {
         Set<LogItem> items = new LinkedHashSet<>();
-        for (int i = 0; i < count; i++) {
-            int formattedLength = getFormattedLength(config);
-            if (formattedLength >= CLIPPING_CUTOFF) {
-                String original = message;
-                message = substring(message, 0, CLIPPING_CUTOFF);
-                items.add(new LogItem(logger, timestamp, level, substring(original, CLIPPING_CUTOFF), throwable));
-            } else {
-                break;
-            }
+
+        LogItem bottom = this;
+        int formattingLength = config.getFormattingLength(bottom);
+        int i = 0;
+        while (i < max && message.length() + formattingLength >= CLIPPING_MAX_LENGTH) {
+            formattingLength = config.getFormattingLength(bottom);
+            int cutoff = CLIPPING_MAX_LENGTH - formattingLength;
+            int pulledCharacterCount = Math.min(cutoff, bottom.message.length());
+
+            String remaining = substring(bottom.message, pulledCharacterCount);
+            bottom.message = substring(bottom.message, 0, pulledCharacterCount);
+
+            if (remaining.length() == 0) break;
+            if (++i == max) break;
+
+            bottom = clone(remaining);
+            items.add(bottom);
         }
+
         return items;
     }
 
@@ -105,6 +114,19 @@ public class LogItem {
 
     public int getFormattedLength(HandlerConfig config) {
         return format(config).length();
+    }
+
+    public LogItem clone(String message) {
+        return new LogItem(logger, timestamp, level, message, throwable);
+    }
+
+    @Override
+    public String toString() {
+        return "LogItem{" +
+                "logger='" + logger + '\'' +
+                ", level=" + level +
+                ", message[" + message.length() + "]='" + (message.length() <= 100 ? message : message.substring(0, 100)) + '\'' +
+                '}';
     }
 
 }
