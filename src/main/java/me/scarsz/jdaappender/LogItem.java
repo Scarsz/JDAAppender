@@ -6,6 +6,9 @@ import lombok.Setter;
 import net.dv8tion.jda.api.entities.Message;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -44,9 +47,12 @@ public class LogItem {
         builder.append(message);
         if (config.getSuffixer() != null) builder.append(config.getSuffixer().apply(this));
         if (throwable != null) {
-            for (StackTraceElement element : throwable.getStackTrace()) {
-                builder.append(element.toString());
-            }
+            try (StringWriter stringWriter = new StringWriter()) {
+                try (PrintWriter printWriter = new PrintWriter(stringWriter)) {
+                    throwable.printStackTrace(printWriter);
+                    builder.append(stringWriter);
+                }
+            } catch (IOException ignored) {} // not possible
         }
 
         return builder.toString();
