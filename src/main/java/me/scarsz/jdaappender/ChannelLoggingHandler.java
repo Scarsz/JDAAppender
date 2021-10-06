@@ -50,7 +50,7 @@ public class ChannelLoggingHandler implements Flushable {
             executor = Executors.newSingleThreadScheduledExecutor();
         }
         if (scheduledFuture == null) {
-            scheduledFuture = Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> {
+            scheduledFuture = executor.scheduleAtFixedRate(() -> {
                 try {
                     this.flush();
                 } catch (Exception e) {
