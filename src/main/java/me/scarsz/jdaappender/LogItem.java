@@ -55,7 +55,8 @@ public class LogItem {
             } catch (IOException ignored) {} // not possible
         }
 
-        return builder.toString();
+        String s = builder.toString();
+        return s.length() > CLIPPING_MAX_LENGTH ? s.substring(0, CLIPPING_MAX_LENGTH) : s;
     }
 
     /**

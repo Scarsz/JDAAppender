@@ -191,6 +191,12 @@ public class HandlerConfig {
      */
     @Getter @Setter private boolean colored = true;
 
+    /**
+     * Whether the logging handler should truncate {@link LogItem}s with a formatted length longer than {@link LogItem#CLIPPING_MAX_LENGTH}.
+     * Default true.
+     */
+    @Getter @Setter private boolean truncateLongItems = true;
+
 
     /**
      * Check how many characters that prefix/suffix formatting takes up for the given LogItem
