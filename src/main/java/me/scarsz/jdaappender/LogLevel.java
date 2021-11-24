@@ -4,6 +4,7 @@ import lombok.Getter;
 
 public enum LogLevel {
 
+    DEBUG("#"),
     INFO(" "),
     WARN("!"),
     ERROR("-");
