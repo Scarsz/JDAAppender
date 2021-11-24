@@ -136,9 +136,9 @@ public class ChannelLoggingHandler implements Flushable {
      * Push the current LogItem stack to Discord, then dump the stack, starting a new message.
      */
     public void dumpStack() {
-        updateMessage().complete();
-        currentMessage = null;
+        if (stack.size() > 0) updateMessage().complete();
         stack.clear();
+        currentMessage = null;
     }
 
     /**
