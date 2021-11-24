@@ -124,7 +124,9 @@ public class ChannelLoggingHandler implements Flushable {
                 stack.add(logItem);
             }
 
-            currentMessage = updateMessage().complete();
+            if (stack.size() > 0) {
+                currentMessage = updateMessage().complete();
+            }
         }
     }
 
