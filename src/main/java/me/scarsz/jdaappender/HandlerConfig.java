@@ -65,6 +65,9 @@ public class HandlerConfig {
      *
      * // translate loggers in your application to the simple class name of the logger
      * handlerConfig.mapLoggerNameFriendly("your.application.package");
+     *
+     * // translate "Module" loggers in your application to the module's simple class name
+     * handlerConfig.mapLoggerType(Module.class, HandlerConfig.getFriendlyMapper());
      * </pre>
      *
      * @param predicate the logger predicate to match
@@ -72,6 +75,36 @@ public class HandlerConfig {
      */
     public void mapLogger(Predicate<String> predicate, Function<String, String> function) {
         loggerMappings.put(predicate, function);
+    }
+    /**
+     * See {@link #loggerMappings}. Shortcut for checking if logger names are assignable from the given superclass, assuming FQCNs.
+     * <strong>Logger mappings are implemented in the default logging prefix! Changing the prefixer will require reimplementation of logger mappings!</strong>
+     *
+     * <pre>
+     * // translate "net.dv8tion.jda*" logger names to simply "JDA"
+     * handlerConfig.mapLoggerName("net.dv8tion.jda", "JDA");
+     *
+     * // translate loggers in a "modules" package of your app to their simple class name + " module"
+     * handlerConfig.mapLoggerNameFriendly("your.application.package.modules", name -> name + " module");
+     *
+     * // translate loggers in your application to the simple class name of the logger
+     * handlerConfig.mapLoggerNameFriendly("your.application.package");
+     *
+     * // translate "Module" loggers in your application to the module's simple class name
+     * handlerConfig.mapLoggerType(Module.class, HandlerConfig.getFriendlyMapper());
+     * </pre>
+     *
+     * @param superclass the superclass to match
+     * @param function a function that returns the name to replace the logger name with
+     */
+    public void mapLoggerType(Class<?> superclass, Function<String, String> function) {
+        loggerMappings.put(s -> {
+            try {
+                return superclass.isAssignableFrom(Class.forName(s));
+            } catch (Throwable ignored) {
+                return false;
+            }
+        }, function);
     }
     /**
      * See {@link #loggerMappings}. Shortcut for loggerMappings.put(prefix, v -> friendlyName).
@@ -86,6 +119,9 @@ public class HandlerConfig {
      *
      * // translate loggers in your application to the simple class name of the logger
      * handlerConfig.mapLoggerNameFriendly("your.application.package");
+     *
+     * // translate "Module" loggers in your application to the module's simple class name
+     * handlerConfig.mapLoggerType(Module.class, HandlerConfig.getFriendlyMapper());
      * </pre>
      * @param prefix the logger name to match
      * @param friendlyName the friendly name to replace the logger name with
@@ -106,6 +142,9 @@ public class HandlerConfig {
      *
      * // translate loggers in your application to the simple class name of the logger
      * handlerConfig.mapLoggerNameFriendly("your.application.package");
+     *
+     * // translate "Module" loggers in your application to the module's simple class name
+     * handlerConfig.mapLoggerType(Module.class, HandlerConfig.getFriendlyMapper());
      * </pre>
      * @param prefix the logger name to match
      * @param function the mapping function
@@ -126,6 +165,9 @@ public class HandlerConfig {
      *
      * // translate loggers in your application to the simple class name of the logger
      * handlerConfig.mapLoggerNameFriendly("your.application.package");
+     *
+     * // translate "Module" loggers in your application to the module's simple class name
+     * handlerConfig.mapLoggerType(Module.class, HandlerConfig.getFriendlyMapper());
      * </pre>
      * @param prefix the logger name to match
      */
@@ -145,6 +187,9 @@ public class HandlerConfig {
      *
      * // translate loggers in your application to the simple class name of the logger
      * handlerConfig.mapLoggerNameFriendly("your.application.package");
+     *
+     * // translate "Module" loggers in your application to the module's simple class name
+     * handlerConfig.mapLoggerType(Module.class, HandlerConfig.getFriendlyMapper());
      * </pre>
      * @param prefix the logger name to match
      * @param function the function to modify the determined friendly name
