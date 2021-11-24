@@ -19,6 +19,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -69,6 +70,7 @@ public class ChannelLoggingHandler implements Flushable {
     @Getter private final HandlerConfig config = new HandlerConfig();
     @Getter private final Deque<LogItem> messageQueue = new LinkedList<>();
     @Getter private final Set<LogItem> stack = new LinkedHashSet<>();
+    @Getter private final AtomicBoolean dirtyBit = new AtomicBoolean();
     @Getter private Supplier<TextChannel> channelSupplier;
     private final Set<Runnable> detachRunnables = new HashSet<>();
     private Message currentMessage = null;
@@ -122,10 +124,12 @@ public class ChannelLoggingHandler implements Flushable {
                 }
 
                 stack.add(logItem);
+                dirtyBit.set(true);
             }
 
-            if (stack.size() > 0) {
+            if (dirtyBit.get() && stack.size() > 0) {
                 currentMessage = updateMessage().complete();
+                dirtyBit.set(false);
             }
         }
     }
