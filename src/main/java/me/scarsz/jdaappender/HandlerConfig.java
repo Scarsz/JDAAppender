@@ -45,10 +45,31 @@ public class HandlerConfig {
      * A logger name mapping may return {@code null} if messages from the logger should be ignored.
      * <strong>Logger mappings are implemented in the default logging prefix! Changing the prefixer will require reimplementation of logger mappings!</strong>
      */
-    @Getter private final Map<String, Function<String, String>> loggerMappings = new LinkedHashMap<>();
+    @Getter private final Map<Predicate<String>, Function<String, String>> loggerMappings = new LinkedHashMap<>();
 
     private static final Function<String, String> friendlyMapper = s -> s.substring(s.lastIndexOf(".") + 1);
 
+    /**
+     * See {@link #loggerMappings}. Shortcut for loggerMappings.put(prefix, v -> friendlyName).
+     * <strong>Logger mappings are implemented in the default logging prefix! Changing the prefixer will require reimplementation of logger mappings!</strong>
+     *
+     * <pre>
+     * // translate "net.dv8tion.jda*" logger names to simply "JDA"
+     * handlerConfig.mapLoggerName("net.dv8tion.jda", "JDA");
+     *
+     * // translate loggers in a "modules" package of your app to their simple class name + " module"
+     * handlerConfig.mapLoggerNameFriendly("your.application.package.modules", name -> name + " module");
+     *
+     * // translate loggers in your application to the simple class name of the logger
+     * handlerConfig.mapLoggerNameFriendly("your.application.package");
+     * </pre>
+     *
+     * @param predicate the logger predicate to match
+     * @param function a function that returns the name to replace the logger name with
+     */
+    public void mapLogger(Predicate<String> predicate, Function<String, String> function) {
+        loggerMappings.put(predicate, function);
+    }
     /**
      * See {@link #loggerMappings}. Shortcut for loggerMappings.put(prefix, v -> friendlyName).
      * <strong>Logger mappings are implemented in the default logging prefix! Changing the prefixer will require reimplementation of logger mappings!</strong>
@@ -67,7 +88,7 @@ public class HandlerConfig {
      * @param friendlyName the friendly name to replace the logger name with
      */
     public void mapLoggerName(String prefix, String friendlyName) {
-        loggerMappings.put(prefix, s -> friendlyName);
+        loggerMappings.put(s -> s.startsWith(prefix), s -> friendlyName);
     }
     /**
      * See {@link #loggerMappings}. Shortcut for loggerMappings.put(prefix, function).
@@ -87,7 +108,7 @@ public class HandlerConfig {
      * @param function the mapping function
      */
     public void mapLoggerName(String prefix, Function<String, String> function) {
-        loggerMappings.put(prefix, function);
+        loggerMappings.put(s -> s.startsWith(prefix), function);
     }
     /**
      * See {@link #loggerMappings}. Shortcut for loggerMappings.put(class prefix, class -> class simple name).
@@ -106,7 +127,7 @@ public class HandlerConfig {
      * @param prefix the logger name to match
      */
     public void mapLoggerNameFriendly(String prefix) {
-        loggerMappings.put(prefix, friendlyMapper);
+        loggerMappings.put(s -> s.startsWith(prefix), friendlyMapper);
     }
     /**
      * See {@link #loggerMappings}. Shortcut for loggerMappings.put(class prefix, class -> function(class simple name)).
@@ -126,7 +147,7 @@ public class HandlerConfig {
      * @param function the function to modify the determined friendly name
      */
     public void mapLoggerNameFriendly(String prefix, Function<String, String> function) {
-        loggerMappings.put(prefix, s -> function.apply(friendlyMapper.apply(s)));
+        loggerMappings.put(s -> s.startsWith(prefix), s -> function.apply(friendlyMapper.apply(s)));
     }
     /**
      * See {@link #loggerMappings}. Ignores messages from the specified logger prefix. Shortcut for loggerMappings.put(prefix, v -> null).
@@ -134,7 +155,7 @@ public class HandlerConfig {
      * @param prefix the logger name prefix to ignore
      */
     public void ignoreLoggerName(String prefix) {
-        loggerMappings.put(prefix, s -> null);
+        loggerMappings.put(s -> s.startsWith(prefix), s -> null);
     }
 
     /**
@@ -153,16 +174,12 @@ public class HandlerConfig {
      * Otherwise, the resolved logger name if mapped, else same as input
      */
     public @Nullable String resolveLoggerName(@NotNull String name) {
-        String resolved = name;
-
-        for (Map.Entry<String, Function<String, String>> entry : loggerMappings.entrySet()) {
-            if (name.startsWith(entry.getKey())) {
-                resolved = entry.getValue().apply(name);
-                break;
+        for (Map.Entry<Predicate<String>, Function<String, String>> entry : loggerMappings.entrySet()) {
+            if (entry.getKey().test(name)) {
+                return entry.getValue().apply(name);
             }
         }
-
-        return resolved;
+        return name;
     }
 
     /**
