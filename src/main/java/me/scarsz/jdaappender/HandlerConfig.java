@@ -47,10 +47,7 @@ public class HandlerConfig {
      */
     @Getter private final Map<String, Function<String, String>> loggerMappings = new LinkedHashMap<>();
 
-    private static final Function<String, String> friendlyMapper = s -> {
-        String[] split = s.split("\\.");
-        return split[split.length - 1];
-    };
+    private static final Function<String, String> friendlyMapper = s -> s.substring(s.lastIndexOf(".") + 1);
 
     /**
      * See {@link #loggerMappings}. Shortcut for loggerMappings.put(prefix, v -> friendlyName).
