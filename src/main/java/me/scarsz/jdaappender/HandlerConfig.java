@@ -144,7 +144,10 @@ public class HandlerConfig {
      * Function to include any relevant details as a prefix to a {@link LogItem}'s content when formatting.
      * Default equates to "[LEVEL Logger] ".
      */
-    @Getter @Setter @Nullable private Function<LogItem, String> prefixer = item -> "[" + item.getLevel().name() + " " + resolveLoggerName(item.getLogger()) + "] ";
+    @Getter @Setter @Nullable private Function<LogItem, String> prefixer = item -> {
+        String name = resolveLoggerName(item.getLogger());
+        return "[" + item.getLevel().name() + (name != null && !name.isEmpty() ? " " + name : "") + "] ";
+    };
 
     /**
      * Resolve the given logger name with any configured logger name mappings
