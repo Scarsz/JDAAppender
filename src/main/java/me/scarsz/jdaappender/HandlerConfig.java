@@ -5,6 +5,7 @@ import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Function;
@@ -258,6 +259,11 @@ public class HandlerConfig {
      * Default null.
      */
     @Getter @Setter @Nullable private Function<LogItem, String> suffixer;
+
+    /**
+     * Log levels that will be processed
+     */
+    @Getter @Setter private EnumSet<LogLevel> logLevels = EnumSet.complementOf(EnumSet.of(LogLevel.DEBUG));
 
     /**
      * Whether the logging handler should format log items which contain a URL to be outside the output code blocks.

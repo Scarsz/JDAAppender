@@ -84,6 +84,7 @@ public class ChannelLoggingHandler implements Flushable {
     }
 
     public void enqueue(LogItem item) {
+        if (!config.getLogLevels().contains(item.getLevel())) return;
         if (config.resolveLoggerName(item.getLogger()) == null) return;
 
         // check for any filtering transformers
