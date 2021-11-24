@@ -47,7 +47,10 @@ public class HandlerConfig {
      */
     @Getter private final Map<Predicate<String>, Function<String, String>> loggerMappings = new LinkedHashMap<>();
 
-    private static final Function<String, String> friendlyMapper = s -> s.substring(s.lastIndexOf(".") + 1);
+    /**
+     * Simple logger name mapper that, assuming the logger's name is a fully-qualified class name, returns the simple name
+     */
+    @Getter private static final Function<String, String> friendlyMapper = s -> s.substring(s.lastIndexOf(".") + 1);
 
     /**
      * See {@link #loggerMappings}. Shortcut for loggerMappings.put(prefix, v -> friendlyName).
