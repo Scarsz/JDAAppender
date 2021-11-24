@@ -17,6 +17,7 @@ import java.util.Arrays;
 public class Log4JLoggingAdapter extends AbstractAppender {
 
     private static final PatternLayout PATTERN_LAYOUT;
+    private static final boolean LOG_EVENT_HAS_MILLIS = Arrays.stream(LogEvent.class.getMethods()).anyMatch(method -> method.getName().equals("getMillis"));
     static {
         Method createLayoutMethod = Arrays.stream(PatternLayout.class.getMethods())
                 .filter(method -> method.getName().equals("createLayout"))
@@ -62,7 +63,7 @@ public class Log4JLoggingAdapter extends AbstractAppender {
 
         handler.enqueue(new LogItem(
                 event.getLoggerName(),
-                event.getMillis(),
+                LOG_EVENT_HAS_MILLIS ? event.getMillis() : System.currentTimeMillis(),
                 level,
                 LogItem.stripColors(event.getMessage().getFormattedMessage()),
                 event.getThrown()
