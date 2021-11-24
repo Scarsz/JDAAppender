@@ -28,7 +28,9 @@ public class JavaLoggingAdapter extends Handler {
                         ? LogLevel.WARN
                         : record.getLevel() == Level.SEVERE
                                 ? LogLevel.ERROR
-                                : null;
+                                : record.getLevel() == Level.FINE
+                                        ? LogLevel.DEBUG
+                                        : null;
 
         if (level != null) {
             handler.enqueue(new LogItem(

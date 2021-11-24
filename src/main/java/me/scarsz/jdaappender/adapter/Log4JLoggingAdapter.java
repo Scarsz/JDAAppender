@@ -57,7 +57,9 @@ public class Log4JLoggingAdapter extends AbstractAppender {
                         ? LogLevel.WARN
                         : event.getLevel() == Level.ERROR
                                 ? LogLevel.ERROR
-                                : null;
+                                : event.getLevel() == Level.DEBUG
+                                        ? LogLevel.DEBUG
+                                        : null;
 
         if (level == null) return;
 
