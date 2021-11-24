@@ -117,10 +117,7 @@ public class ChannelLoggingHandler implements Flushable {
 
                 if (!canFit(logItem)) {
                     if (stack.size() == 0) throw new IllegalStateException("Can't fit LogItem into empty stack: " + logItem);
-
-                    updateMessage().complete();
-                    currentMessage = null;
-                    stack.clear();
+                    dumpStack();
                 }
 
                 stack.add(logItem);
@@ -132,6 +129,15 @@ public class ChannelLoggingHandler implements Flushable {
                 dirtyBit.set(false);
             }
         }
+    }
+
+    /**
+     * Push the current LogItem stack to Discord, then dump the stack, starting a new message.
+     */
+    public void dumpStack() {
+        updateMessage().complete();
+        currentMessage = null;
+        stack.clear();
     }
 
     /**
