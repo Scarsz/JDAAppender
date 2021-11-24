@@ -50,6 +50,8 @@ public class LogItem {
             try (StringWriter stringWriter = new StringWriter()) {
                 try (PrintWriter printWriter = new PrintWriter(stringWriter)) {
                     throwable.printStackTrace(printWriter);
+
+                    builder.append('\n');
                     builder.append(stringWriter);
                 }
             } catch (IOException ignored) {} // not possible
