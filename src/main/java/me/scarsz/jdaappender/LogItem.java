@@ -27,6 +27,9 @@ public class LogItem {
     @Getter @Setter(AccessLevel.PACKAGE) private String message;
     @Getter private final Throwable throwable;
 
+    public LogItem(String logger, LogLevel level, String message) {
+        this(logger, System.currentTimeMillis(), level, message, null);
+    }
     public LogItem(String logger, long timestamp, LogLevel level, String message, Throwable throwable) {
         this.logger = logger;
         this.timestamp = timestamp;
