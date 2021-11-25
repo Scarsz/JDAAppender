@@ -242,8 +242,8 @@ public class HandlerConfig {
      * Default equates to "[LEVEL Logger] ".
      */
     @Getter @Setter @Nullable private Function<LogItem, String> prefixer = item -> {
-        String name = pad(resolveLoggerName(item.getLogger()), loggerNamePadding);
-        return "[" + pad(item.getLevel().name(), LogLevel.MAX_NAME_LENGTH) + (name != null && !name.isEmpty() ? " " + name : "") + "] ";
+        String name = padLoggerName(resolveLoggerName(item.getLogger()));
+        return "[" + padLevelName(item.getLevel().name()) + (name != null && !name.isEmpty() ? " " + name : "") + "] ";
     };
 
     /**
