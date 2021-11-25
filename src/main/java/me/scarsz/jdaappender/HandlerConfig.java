@@ -41,7 +41,7 @@ public class HandlerConfig {
     }
 
     /**
-     * Left-pads logger names less than the set amount of characters with whitespace.
+     * Pads logger names less than the set amount of characters with whitespace.
      * Negative values indicate left-padding, positive values indicate right-padding.
      * Default disabled.
      */
