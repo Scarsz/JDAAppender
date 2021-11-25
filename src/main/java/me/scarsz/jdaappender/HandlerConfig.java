@@ -314,7 +314,7 @@ public class HandlerConfig {
         return length;
     }
 
-    String pad(String string, LogLevel level) {
+    public String pad(String string, LogLevel level) {
         if (loggerNamePadding == 0) return string;
         if (string.length() >= Math.abs(loggerNamePadding)) return string;
         int paddingLength = Math.abs(loggerNamePadding) + LogLevel.MAX_NAME_LENGTH - level.name().length();
