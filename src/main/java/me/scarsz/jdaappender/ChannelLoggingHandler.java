@@ -265,6 +265,8 @@ public class ChannelLoggingHandler implements Flushable {
             Class<?> logFactoryClass = Class.forName(org.slf4j.impl.StaticLoggerBinder.getSingleton().getLoggerFactoryClassStr());
             switch (logFactoryClass.getSimpleName()) {
                 case "JDK14LoggerFactory": return attachJavaLogging();
+                default:
+                    enqueue(new LogItem("Appender", LogLevel.ERROR, "SLF4J Logger factory " + logFactoryClass.getName() + " is not supported"));
                 //TODO more SLF4J implementations
             }
         } catch (Throwable ignored) {}
