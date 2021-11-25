@@ -248,10 +248,10 @@ public class HandlerConfig {
     public @Nullable String resolveLoggerName(@NotNull String name) {
         for (Map.Entry<Predicate<String>, Function<String, String>> entry : loggerMappings.entrySet()) {
             if (entry.getKey().test(name)) {
-                return entry.getValue().apply(name);
+                return pad(entry.getValue().apply(name));
             }
         }
-        return name;
+        return pad(name);
     }
 
     /**
@@ -291,6 +291,16 @@ public class HandlerConfig {
      */
     @Getter @Setter private boolean truncateLongItems = true;
 
+    /**
+     * Left-pads logger names less than the set amount of characters with whitespace.
+     * Negative values indicate left-padding, positive values indicate right-padding.
+     * Default disabled.
+     */
+    @Getter @Setter private int loggerNamePadding = 0;
+
+
+
+
 
     /**
      * Check how many characters that prefix/suffix formatting takes up for the given LogItem
@@ -302,6 +312,21 @@ public class HandlerConfig {
         if (prefixer != null) length += prefixer.apply(logItem).length();
         if (suffixer != null) length += suffixer.apply(logItem).length();
         return length;
+    }
+
+    String pad(String string) {
+        if (loggerNamePadding == 0) return string;
+        if (string.length() >= Math.abs(loggerNamePadding)) return string;
+
+        StringBuilder builder = new StringBuilder();
+        if (loggerNamePadding > 0) {
+            builder.append(string);
+            while (builder.length() < Math.abs(loggerNamePadding) - string.length()) builder.append(' ');
+        } else {
+            while (builder.length() < Math.abs(loggerNamePadding) - string.length()) builder.append(' ');
+            builder.append(string);
+        }
+        return builder.toString();
     }
 
 }
