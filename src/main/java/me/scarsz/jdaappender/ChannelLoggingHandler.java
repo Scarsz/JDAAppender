@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.SneakyThrows;
 import me.scarsz.jdaappender.adapter.JavaLoggingAdapter;
 import me.scarsz.jdaappender.adapter.Log4JLoggingAdapter;
-import me.scarsz.jdaappender.adapter.StandardLoggingAdapter;
+import me.scarsz.jdaappender.adapter.SystemLoggingAdapter;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.requests.restaction.MessageAction;
@@ -291,7 +291,7 @@ public class ChannelLoggingHandler implements Flushable {
         }
     }
     public ChannelLoggingHandler attachSystemLogging() {
-        StandardLoggingAdapter adapter = new StandardLoggingAdapter(this);
+        SystemLoggingAdapter adapter = new SystemLoggingAdapter(this);
         PrintStream originalOut = System.out;
         PrintStream originalErr = System.err;
         System.setOut(adapter.getOutStream());
