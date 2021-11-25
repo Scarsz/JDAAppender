@@ -20,7 +20,7 @@ public class LongDataExample {
             handlerConfig.setSplitCodeBlockForLinks(false);
             handlerConfig.setAllowLinkEmbeds(true);
             handlerConfig.mapLoggerName("net.dv8tion.jda", "JDA");
-        }).attachStandardLogging().schedule();
+        }).attachSystemLogging().schedule();
 
         // enqueue long random, log messages
         int count = ThreadLocalRandom.current().nextInt(5, 15);

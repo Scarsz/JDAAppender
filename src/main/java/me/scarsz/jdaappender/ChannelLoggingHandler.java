@@ -269,7 +269,7 @@ public class ChannelLoggingHandler implements Flushable {
             }
         } catch (Throwable ignored) {}
 
-        return attachStandardLogging();
+        return attachSystemLogging();
     }
     public void detach() {
         Iterator<Runnable> iterator = detachRunnables.iterator();
@@ -279,7 +279,7 @@ public class ChannelLoggingHandler implements Flushable {
             iterator.remove();
         }
     }
-    public ChannelLoggingHandler attachStandardLogging() {
+    public ChannelLoggingHandler attachSystemLogging() {
         StandardLoggingAdapter adapter = new StandardLoggingAdapter(this);
         PrintStream originalOut = System.out;
         PrintStream originalErr = System.err;

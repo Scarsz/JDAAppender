@@ -18,7 +18,7 @@ public class StandardLoggingExample {
             handlerConfig.setSplitCodeBlockForLinks(false);
             handlerConfig.setAllowLinkEmbeds(true);
             handlerConfig.mapLoggerName("net.dv8tion.jda", "JDA");
-        }).attachStandardLogging().schedule();
+        }).attachSystemLogging().schedule();
 
         // at this point, System.out/err logging is ready to go and will be streamed to the channel
 
