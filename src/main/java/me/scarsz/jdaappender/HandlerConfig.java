@@ -321,7 +321,7 @@ public class HandlerConfig {
         StringBuilder builder = new StringBuilder();
         if (loggerNamePadding > 0) {
             builder.append(string);
-            while (builder.length() < Math.abs(loggerNamePadding) - string.length()) builder.append(' ');
+            while (builder.length() < Math.abs(loggerNamePadding)) builder.append(' ');
         } else {
             while (builder.length() < Math.abs(loggerNamePadding) - string.length()) builder.append(' ');
             builder.append(string);
