@@ -3,6 +3,7 @@ package me.scarsz.jdaappender;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import me.scarsz.jdaappender.adapter.JavaLoggingAdapter;
+import me.scarsz.jdaappender.adapter.Log4JLoggingAdapter;
 import me.scarsz.jdaappender.adapter.StandardLoggingAdapter;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
@@ -313,9 +314,7 @@ public class ChannelLoggingHandler implements Flushable {
         Method addAppenderMethod = rootLogger.getClass().getMethod("addAppender", org.apache.logging.log4j.core.Appender.class);
         Method removeAppenderMethod = rootLogger.getClass().getMethod("removeAppender", org.apache.logging.log4j.core.Appender.class);
 
-        Object adapter = Class.forName("me.scarsz.jdaappender.adapter.Log4JLoggingAdapter")
-                .getConstructor(ChannelLoggingHandler.class)
-                .newInstance(this);
+        org.apache.logging.log4j.core.Appender adapter = new Log4JLoggingAdapter(this);
         addAppenderMethod.invoke(rootLogger, adapter);
 
         detachRunnables.add(() -> {
@@ -334,9 +333,7 @@ public class ChannelLoggingHandler implements Flushable {
         Method addAppenderMethod = rootLogger.getClass().getMethod("addAppender", ch.qos.logback.core.Appender.class);
         Method detachAppenderMethod = rootLogger.getClass().getMethod("detachAppender", ch.qos.logback.core.Appender.class);
 
-        Object adapter = Class.forName("me.scarsz.jdaappender.adapter.LogbackLoggingAdapter")
-                .getConstructor(ChannelLoggingHandler.class, ch.qos.logback.classic.LoggerContext.class)
-                .newInstance(this, loggerContext);
+        ch.qos.logback.core.Appender<?> adapter = new me.scarsz.jdaappender.adapter.LogbackLoggingAdapter(this, loggerContext);
         addAppenderMethod.invoke(rootLogger, adapter);
 
         detachRunnables.add(() -> {
