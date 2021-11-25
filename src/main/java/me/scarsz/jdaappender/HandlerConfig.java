@@ -41,6 +41,13 @@ public class HandlerConfig {
     }
 
     /**
+     * Left-pads logger names less than the set amount of characters with whitespace.
+     * Negative values indicate left-padding, positive values indicate right-padding.
+     * Default disabled.
+     */
+    @Getter @Setter private int loggerNamePadding = 0;
+
+    /**
      * Mappings representing a logger name prefix and associated Functions to transform those logger names.
      * Used to provide a more user-friendly name for a logger, such as translating "net.dv8tion.jda" to "JDA".
      * A logger name mapping may return {@code null} if messages from the logger should be ignored.
@@ -235,8 +242,8 @@ public class HandlerConfig {
      * Default equates to "[LEVEL Logger] ".
      */
     @Getter @Setter @Nullable private Function<LogItem, String> prefixer = item -> {
-        String name = pad(resolveLoggerName(item.getLogger()), item.getLevel());
-        return "[" + item.getLevel().name() + (name != null && !name.isEmpty() ? " " + name : "") + "] ";
+        String name = pad(resolveLoggerName(item.getLogger()), loggerNamePadding);
+        return "[" + pad(item.getLevel().name(), LogLevel.MAX_NAME_LENGTH) + (name != null && !name.isEmpty() ? " " + name : "") + "] ";
     };
 
     /**
@@ -291,13 +298,6 @@ public class HandlerConfig {
      */
     @Getter @Setter private boolean truncateLongItems = true;
 
-    /**
-     * Left-pads logger names less than the set amount of characters with whitespace.
-     * Negative values indicate left-padding, positive values indicate right-padding.
-     * Default disabled.
-     */
-    @Getter @Setter private int loggerNamePadding = 0;
-
 
 
 
@@ -314,17 +314,22 @@ public class HandlerConfig {
         return length;
     }
 
-    public String pad(String string, LogLevel level) {
-        if (loggerNamePadding == 0) return string;
-        if (string.length() >= Math.abs(loggerNamePadding)) return string;
-        int paddingLength = Math.abs(loggerNamePadding) + LogLevel.MAX_NAME_LENGTH - level.name().length();
+    /**
+     * Utility method to either left or right-pad the given string
+     * @param string the string to pad
+     * @param to how many characters the string should equal after padding
+     * @return the padded string
+     */
+    public String pad(String string, int to) {
+        if (to == 0) return string;
+        if (string == null || string.isEmpty() || string.length() >= Math.abs(to)) return string;
 
         StringBuilder builder = new StringBuilder();
-        if (loggerNamePadding > 0) {
+        if (to > 0) {
             builder.append(string);
-            while (builder.length() < paddingLength) builder.append(' ');
+            while (builder.length() < Math.abs(to)) builder.append(' ');
         } else {
-            while (builder.length() < paddingLength - string.length()) builder.append(' ');
+            while (builder.length() < Math.abs(to) - string.length()) builder.append(' ');
             builder.append(string);
         }
         return builder.toString();

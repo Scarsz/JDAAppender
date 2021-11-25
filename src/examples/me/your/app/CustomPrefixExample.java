@@ -21,7 +21,7 @@ public class CustomPrefixExample {
             handlerConfig.mapLoggerName("net.dv8tion.jda", "JDA");
             handlerConfig.setPrefixer(new ExtensionBuilder(handlerConfig)
                     .date().space().time12Hours().space()
-                    .text("[").level().space().logger().text("]")
+                    .text("[").levelPadded().space().loggerPadded().text("]")
                     .build()
             );
         }).attach().schedule();

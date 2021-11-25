@@ -34,8 +34,16 @@ public class ExtensionBuilder {
         this.functions.add(item -> item.getLevel().name());
         return this;
     }
+    public ExtensionBuilder levelPadded() {
+        this.functions.add(item -> config.pad(item.getLevel().name(), LogLevel.MAX_NAME_LENGTH));
+        return this;
+    }
     public ExtensionBuilder logger() {
-        this.functions.add(item -> config.pad(config.resolveLoggerName(item.getLogger()), item.getLevel()));
+        this.functions.add(item -> config.resolveLoggerName(item.getLogger()));
+        return this;
+    }
+    public ExtensionBuilder loggerPadded() {
+        this.functions.add(item -> config.pad(config.resolveLoggerName(item.getLogger()), config.getLoggerNamePadding()));
         return this;
     }
     public ExtensionBuilder time12Hours() {
