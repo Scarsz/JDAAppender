@@ -235,7 +235,7 @@ public class HandlerConfig {
      * Default equates to "[LEVEL Logger] ".
      */
     @Getter @Setter @Nullable private Function<LogItem, String> prefixer = item -> {
-        String name = resolveLoggerName(item.getLogger());
+        String name = pad(resolveLoggerName(item.getLogger()), item.getLevel());
         return "[" + item.getLevel().name() + (name != null && !name.isEmpty() ? " " + name : "") + "] ";
     };
 
@@ -248,10 +248,10 @@ public class HandlerConfig {
     public @Nullable String resolveLoggerName(@NotNull String name) {
         for (Map.Entry<Predicate<String>, Function<String, String>> entry : loggerMappings.entrySet()) {
             if (entry.getKey().test(name)) {
-                return pad(entry.getValue().apply(name));
+                return entry.getValue().apply(name);
             }
         }
-        return pad(name);
+        return name;
     }
 
     /**
@@ -314,16 +314,17 @@ public class HandlerConfig {
         return length;
     }
 
-    String pad(String string) {
+    String pad(String string, LogLevel level) {
         if (loggerNamePadding == 0) return string;
         if (string.length() >= Math.abs(loggerNamePadding)) return string;
+        int paddingLength = Math.abs(loggerNamePadding) + LogLevel.MAX_NAME_LENGTH - level.name().length();
 
         StringBuilder builder = new StringBuilder();
         if (loggerNamePadding > 0) {
             builder.append(string);
-            while (builder.length() < Math.abs(loggerNamePadding)) builder.append(' ');
+            while (builder.length() < paddingLength) builder.append(' ');
         } else {
-            while (builder.length() < Math.abs(loggerNamePadding) - string.length()) builder.append(' ');
+            while (builder.length() < paddingLength - string.length()) builder.append(' ');
             builder.append(string);
         }
         return builder.toString();

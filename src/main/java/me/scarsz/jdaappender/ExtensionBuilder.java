@@ -35,7 +35,7 @@ public class ExtensionBuilder {
         return this;
     }
     public ExtensionBuilder logger() {
-        this.functions.add(item -> config.resolveLoggerName(item.getLogger()));
+        this.functions.add(item -> config.pad(config.resolveLoggerName(item.getLogger()), item.getLevel()));
         return this;
     }
     public ExtensionBuilder time12Hours() {
