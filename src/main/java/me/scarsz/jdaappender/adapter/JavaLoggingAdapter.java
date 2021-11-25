@@ -1,4 +1,4 @@
-package me.scarsz.jdaappender.adapter.slf4j;
+package me.scarsz.jdaappender.adapter;
 
 import me.scarsz.jdaappender.ChannelLoggingHandler;
 import me.scarsz.jdaappender.LogItem;

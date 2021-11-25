@@ -57,15 +57,15 @@ public class Log4JLoggingAdapter extends AbstractAppender {
                 : event.getLevel() == Level.DEBUG ? LogLevel.DEBUG
                 : null;
 
-        if (level == null) return;
-
-        handler.enqueue(new LogItem(
-                event.getLoggerName(),
-                LOG_EVENT_HAS_MILLIS ? event.getMillis() : System.currentTimeMillis(),
-                level,
-                LogItem.stripColors(event.getMessage().getFormattedMessage()),
-                event.getThrown()
-        ));
+        if (level != null) {
+            handler.enqueue(new LogItem(
+                    event.getLoggerName(),
+                    LOG_EVENT_HAS_MILLIS ? event.getMillis() : System.currentTimeMillis(),
+                    level,
+                    LogItem.stripColors(event.getMessage().getFormattedMessage()),
+                    event.getThrown()
+            ));
+        }
     }
 
     @Override

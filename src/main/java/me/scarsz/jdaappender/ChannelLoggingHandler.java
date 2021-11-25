@@ -2,8 +2,8 @@ package me.scarsz.jdaappender;
 
 import lombok.Getter;
 import lombok.SneakyThrows;
+import me.scarsz.jdaappender.adapter.JavaLoggingAdapter;
 import me.scarsz.jdaappender.adapter.StandardLoggingAdapter;
-import me.scarsz.jdaappender.adapter.slf4j.JavaLoggingAdapter;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.requests.restaction.MessageAction;
@@ -260,15 +260,22 @@ public class ChannelLoggingHandler implements Flushable {
             return attachLog4jLogging();
         } catch (Throwable ignored) {}
 
+        // logback?
+        try {
+            Class.forName("ch.qos.logback.core.Appender");
+            return attachLogbackLogging();
+        } catch (Throwable ignored) {}
+
         // slf4j?
         try {
             Class<?> logFactoryClass = Class.forName(org.slf4j.impl.StaticLoggerBinder.getSingleton().getLoggerFactoryClassStr());
             switch (logFactoryClass.getSimpleName()) {
                 case "JDK14LoggerFactory": return attachJavaLogging();
+                case "ContextSelectorStaticBinder": return attachLogbackLogging();
+                //TODO more SLF4J implementations
                 default:
                     System.err.println("SLF4J Logger factory " + logFactoryClass.getName() + " is not supported");
                     enqueue(new LogItem("Appender", LogLevel.ERROR, "SLF4J Logger factory " + logFactoryClass.getName() + " is not supported"));
-                //TODO more SLF4J implementations
             }
         } catch (Throwable ignored) {}
 
@@ -302,20 +309,39 @@ public class ChannelLoggingHandler implements Flushable {
     }
     @SneakyThrows
     public ChannelLoggingHandler attachLog4jLogging() {
-        Object rootLogger = Class.forName("org.apache.logging.log4j.LogManager").getMethod("getRootLogger").invoke(null);
-        Method addAppenderMethod = Arrays.stream(rootLogger.getClass().getMethods())
-                .filter(method -> method.getName().equals("addAppender"))
-                .findFirst().orElseThrow(() -> new RuntimeException("No RootLogger#addAppender method"));
-        Method removeAppenderMethod = Arrays.stream(rootLogger.getClass().getMethods())
-                .filter(method -> method.getName().equals("removeAppender"))
-                .findFirst().orElseThrow(() -> new RuntimeException("No RootLogger#removeAppender method"));
+        org.apache.logging.log4j.Logger rootLogger = org.apache.logging.log4j.LogManager.getRootLogger();
+        Method addAppenderMethod = rootLogger.getClass().getMethod("addAppender", org.apache.logging.log4j.core.Appender.class);
+        Method removeAppenderMethod = rootLogger.getClass().getMethod("removeAppender", org.apache.logging.log4j.core.Appender.class);
 
-        Object adapter = Class.forName("me.scarsz.jdaappender.adapter.Log4JLoggingAdapter").getConstructor(ChannelLoggingHandler.class).newInstance(this);
+        Object adapter = Class.forName("me.scarsz.jdaappender.adapter.Log4JLoggingAdapter")
+                .getConstructor(ChannelLoggingHandler.class)
+                .newInstance(this);
         addAppenderMethod.invoke(rootLogger, adapter);
 
         detachRunnables.add(() -> {
             try {
                 removeAppenderMethod.invoke(rootLogger, adapter);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+        return this;
+    }
+    @SneakyThrows
+    public ChannelLoggingHandler attachLogbackLogging() {
+        ch.qos.logback.classic.LoggerContext loggerContext = (ch.qos.logback.classic.LoggerContext) org.slf4j.LoggerFactory.getILoggerFactory();
+        org.slf4j.Logger rootLogger = loggerContext.getLogger(ch.qos.logback.classic.Logger.ROOT_LOGGER_NAME);
+        Method addAppenderMethod = rootLogger.getClass().getMethod("addAppender", ch.qos.logback.core.Appender.class);
+        Method detachAppenderMethod = rootLogger.getClass().getMethod("detachAppender", ch.qos.logback.core.Appender.class);
+
+        Object adapter = Class.forName("me.scarsz.jdaappender.adapter.LogbackLoggingAdapter")
+                .getConstructor(ChannelLoggingHandler.class, ch.qos.logback.classic.LoggerContext.class)
+                .newInstance(this, loggerContext);
+        addAppenderMethod.invoke(rootLogger, adapter);
+
+        detachRunnables.add(() -> {
+            try {
+                detachAppenderMethod.invoke(rootLogger, adapter);
             } catch (Exception e) {
                 e.printStackTrace();
             }
