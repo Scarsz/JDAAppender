@@ -70,7 +70,7 @@ public class Log4JLoggingAdapter extends AbstractAppender {
 
     @Override
     public boolean isStarted() {
-        return PATTERN_LAYOUT != null && handler.getChannelSupplier().get() != null;
+        return true;
     }
 
 }
