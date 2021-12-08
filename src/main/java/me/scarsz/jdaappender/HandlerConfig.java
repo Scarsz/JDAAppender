@@ -321,8 +321,8 @@ public class HandlerConfig {
      * @return the padded string
      */
     public String pad(String string, int to) {
-        if (to == 0) return string;
-        if (string == null || string.isEmpty() || string.length() >= Math.abs(to)) return string;
+        if (string == null) string = "";
+        if (to == 0 || string.length() >= Math.abs(to)) return string;
 
         StringBuilder builder = new StringBuilder();
         if (to > 0) {
