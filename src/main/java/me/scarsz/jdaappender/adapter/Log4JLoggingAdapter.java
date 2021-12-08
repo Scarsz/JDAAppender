@@ -13,7 +13,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 
-@Plugin(name = "DiscordSRV-ConsoleChannel", category = "Core", elementType = "appender", printObject = true)
+@Plugin(name = "JDAAppender", category = "Core", elementType = "appender", printObject = true)
 public class Log4JLoggingAdapter extends AbstractAppender {
 
     private static final PatternLayout PATTERN_LAYOUT;
