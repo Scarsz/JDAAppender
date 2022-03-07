@@ -36,7 +36,7 @@ public class ChannelLoggingHandler implements Flushable {
      * @return this channel logging handler
      */
     public ChannelLoggingHandler schedule() {
-        return schedule(1, TimeUnit.SECONDS);
+        return schedule(1500, TimeUnit.MILLISECONDS);
     }
     /**
      * Schedule the handler to asynchronously flush to the logging channel every {period} {unit}.
