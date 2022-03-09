@@ -34,7 +34,7 @@ public class LogItem {
         this.logger = logger;
         this.timestamp = timestamp;
         this.level = level;
-        this.message = message;
+        this.message = message != null ? message : "";
         this.throwable = throwable;
     }
 
