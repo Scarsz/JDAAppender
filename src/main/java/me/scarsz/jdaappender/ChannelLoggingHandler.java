@@ -193,7 +193,7 @@ public class ChannelLoggingHandler implements Flushable {
 
         StringJoiner joiner = new StringJoiner("\n");
         for (LogItem item : stack) {
-            boolean willSplit = config.isSplitCodeBlockForLinks() && URL_PATTERN.matcher(item.getMessage()).find();
+            boolean willSplit = config.isSplitCodeBlockForLinks() && item.getMessage() != null && URL_PATTERN.matcher(item.getMessage()).find();
 
             String formatted = item.format(config);
 
