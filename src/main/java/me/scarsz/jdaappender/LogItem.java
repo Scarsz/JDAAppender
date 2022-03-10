@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 import net.dv8tion.jda.api.entities.Message;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -24,13 +25,13 @@ public class LogItem {
     @Getter private final String logger;
     @Getter private final long timestamp;
     @Getter private final LogLevel level;
-    @Getter @Setter(AccessLevel.PACKAGE) private String message;
-    @Getter private final Throwable throwable;
+    @Getter @Setter(AccessLevel.PACKAGE) @Nullable private String message;
+    @Getter @Nullable private final Throwable throwable;
 
     public LogItem(String logger, LogLevel level, String message) {
         this(logger, System.currentTimeMillis(), level, message, null);
     }
-    public LogItem(String logger, long timestamp, LogLevel level, String message, Throwable throwable) {
+    public LogItem(String logger, long timestamp, LogLevel level, @Nullable String message, @Nullable Throwable throwable) {
         this.logger = logger;
         this.timestamp = timestamp;
         this.level = level;
@@ -88,7 +89,7 @@ public class LogItem {
         LogItem bottom = this;
         int formattingLength = config.getFormattingLength(bottom);
         int i = 0;
-        while (i < max && message.length() + formattingLength >= CLIPPING_MAX_LENGTH) {
+        while (message != null && message.length() > 0 && i < max && message.length() + formattingLength >= CLIPPING_MAX_LENGTH) {
             formattingLength = config.getFormattingLength(bottom);
             int cutoff = CLIPPING_MAX_LENGTH - formattingLength;
             int pulledCharacterCount = Math.min(cutoff, bottom.message.length());
@@ -96,10 +97,11 @@ public class LogItem {
             String remaining = substring(bottom.message, pulledCharacterCount);
             bottom.message = substring(bottom.message, 0, pulledCharacterCount);
 
-            if (remaining.length() == 0) break;
+            if (remaining == null || remaining.length() == 0) break;
             if (++i == max) break;
 
             bottom = clone(remaining);
+            if (bottom.message == null) return items;
             items.add(bottom);
         }
 
@@ -114,10 +116,11 @@ public class LogItem {
         return colorPattern.matcher(str).replaceAll("");
     }
 
-    private String substring(String str, int start) {
+    private @Nullable String substring(String str, int start) {
         return substring(str, start, str.length());
     }
-    private static String substring(String str, int start, int end) {
+    private static @Nullable String substring(String str, int start, int end) {
+        if (str == null) return null;
         if (end < 0) end += str.length();
         if (start < 0) start = 0;
         if (end > str.length()) end = str.length();
@@ -137,7 +140,10 @@ public class LogItem {
         return "LogItem{" +
                 "logger='" + logger + '\'' +
                 ", level=" + level +
-                ", message[" + message.length() + "]='" + (message.length() <= 100 ? message : message.substring(0, 100)) + '\'' +
+                (message != null
+                        ? ", message[" + message.length() + "]='" + (message.length() <= 100 ? message : message.substring(0, 100)) + '\''
+                        : ", message[]=\"null"
+                ) +
                 '}';
     }
 
