@@ -6,6 +6,8 @@ import me.scarsz.jdaappender.adapter.JavaLoggingAdapter;
 import me.scarsz.jdaappender.adapter.SystemLoggingAdapter;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.exceptions.ErrorResponseException;
+import net.dv8tion.jda.api.requests.ErrorResponse;
 import net.dv8tion.jda.api.requests.restaction.MessageAction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -141,7 +143,7 @@ public class ChannelLoggingHandler implements Flushable {
             }
 
             if (dirtyBit.get() && stack.size() > 0) {
-                currentMessage = updateMessage().complete();
+                currentMessage = updateMessage();
                 dirtyBit.set(false);
             }
         }
@@ -151,7 +153,7 @@ public class ChannelLoggingHandler implements Flushable {
      * Push the current LogItem stack to Discord, then dump the stack, starting a new message.
      */
     public void dumpStack() {
-        if (stack.size() > 0) updateMessage().complete();
+        if (stack.size() > 0) updateMessage();
         stack.clear();
         currentMessage = null;
     }
@@ -187,8 +189,7 @@ public class ChannelLoggingHandler implements Flushable {
         return lengthSum + logItem.format(config).length() + 5 <= Message.MAX_CONTENT_LENGTH;
     }
 
-    @CheckReturnValue
-    private MessageAction updateMessage() {
+    private Message updateMessage() {
         if (stack.size() == 0) throw new IllegalStateException("No messages on stack");
 
         StringJoiner joiner = new StringJoiner("\n");
@@ -216,13 +217,19 @@ public class ChannelLoggingHandler implements Flushable {
         // safeguard against empty lines
         while (full.contains("\n\n")) full = full.replace("\n\n", "\n");
 
-        MessageAction action;
-        if (currentMessage == null) {
-            action = channelSupplier.get().sendMessage(full);
-        } else {
-            action = currentMessage.editMessage(full);
+        if (currentMessage != null) {
+            try {
+                return currentMessage.editMessage(full).complete();
+            } catch (ErrorResponseException e) {
+                if (e.getErrorResponse() == ErrorResponse.UNKNOWN_MESSAGE) {
+                    currentMessage = null;
+                } else {
+                    throw e;
+                }
+            }
         }
-        return action;
+
+        return channelSupplier.get().sendMessage(full).complete();
     }
 
     /**
