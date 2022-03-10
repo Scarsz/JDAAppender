@@ -67,6 +67,7 @@ public class ChannelLoggingHandler implements Flushable {
      */
     private static final Pattern URL_PATTERN = Pattern.compile("https?://\\S+");
 
+    private final Deque<LogItem> unprocessedQueue = new LinkedList<>();
     @Getter private final HandlerConfig config = new HandlerConfig();
     @Getter private final Deque<LogItem> messageQueue = new LinkedList<>();
     @Getter private final Set<LogItem> stack = new LinkedHashSet<>();
@@ -84,6 +85,10 @@ public class ChannelLoggingHandler implements Flushable {
     }
 
     public void enqueue(LogItem item) {
+        unprocessedQueue.add(item);
+    }
+
+    private void process(LogItem item) {
         if (!config.getLogLevels().contains(item.getLevel())) return;
         if (config.resolveLoggerName(item.getLogger()) == null) return;
 
@@ -108,6 +113,11 @@ public class ChannelLoggingHandler implements Flushable {
 
     @Override
     public void flush() {
+        LogItem currentItem;
+        while ((currentItem = unprocessedQueue.poll()) != null) {
+            process(currentItem);
+        }
+
         TextChannel loggingChannel = channelSupplier.get();
         if (loggingChannel != null) {
             LogItem logItem;
