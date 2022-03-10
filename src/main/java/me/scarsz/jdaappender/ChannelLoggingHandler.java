@@ -4,15 +4,14 @@ import lombok.Getter;
 import lombok.SneakyThrows;
 import me.scarsz.jdaappender.adapter.JavaLoggingAdapter;
 import me.scarsz.jdaappender.adapter.SystemLoggingAdapter;
+import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.exceptions.ErrorResponseException;
 import net.dv8tion.jda.api.requests.ErrorResponse;
-import net.dv8tion.jda.api.requests.restaction.MessageAction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import javax.annotation.CheckReturnValue;
 import java.io.Flushable;
 import java.io.PrintStream;
 import java.lang.reflect.Method;
@@ -121,7 +120,7 @@ public class ChannelLoggingHandler implements Flushable {
         }
 
         TextChannel loggingChannel = channelSupplier.get();
-        if (loggingChannel != null) {
+        if (loggingChannel != null && loggingChannel.getJDA().getStatus() == JDA.Status.CONNECTED) {
             LogItem logItem;
             while ((logItem = messageQueue.poll()) != null) {
                 if (logItem.getMessage() == null && logItem.getThrowable() == null) {
