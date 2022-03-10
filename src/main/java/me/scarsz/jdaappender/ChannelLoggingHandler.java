@@ -67,9 +67,9 @@ public class ChannelLoggingHandler implements Flushable {
      */
     private static final Pattern URL_PATTERN = Pattern.compile("https?://\\S+");
 
-    private final Deque<LogItem> unprocessedQueue = new LinkedList<>();
     @Getter private final HandlerConfig config = new HandlerConfig();
     @Getter private final Deque<LogItem> messageQueue = new LinkedList<>();
+    private final Deque<LogItem> unprocessedQueue = new LinkedList<>();
     @Getter private final Set<LogItem> stack = new LinkedHashSet<>();
     @Getter private final AtomicBoolean dirtyBit = new AtomicBoolean();
     @Getter private Supplier<TextChannel> channelSupplier;
