@@ -10,7 +10,7 @@ Using default values:
 ```java
 ChannelLoggingHandler handler = new ChannelLoggingHandler(() -> jda.getTextChannelById(System.getenv("CHANNEL")))
         .attach() // attach to SLF4J JDK logging if present, else Log4j if present, else standard out/err
-        .schedule(); // schedule handler to flush output asynchronously every second
+        .schedule(); // schedule handler to flush output asynchronously every 1.5 seconds
 ```
 
 Customizing config values, such as adding a logger name mapping:
