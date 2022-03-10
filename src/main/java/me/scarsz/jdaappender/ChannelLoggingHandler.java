@@ -69,6 +69,7 @@ public class ChannelLoggingHandler implements Flushable {
 
     @Getter private final HandlerConfig config = new HandlerConfig();
     @Getter private final Deque<LogItem> messageQueue = new LinkedList<>();
+    private final Deque<LogItem> unprocessedQueue = new LinkedList<>();
     @Getter private final Set<LogItem> stack = new LinkedHashSet<>();
     @Getter private final AtomicBoolean dirtyBit = new AtomicBoolean();
     @Getter private Supplier<TextChannel> channelSupplier;
@@ -84,6 +85,10 @@ public class ChannelLoggingHandler implements Flushable {
     }
 
     public void enqueue(LogItem item) {
+        unprocessedQueue.add(item);
+    }
+
+    private void process(LogItem item) {
         if (!config.getLogLevels().contains(item.getLevel())) return;
         if (config.resolveLoggerName(item.getLogger()) == null) return;
 
@@ -108,10 +113,20 @@ public class ChannelLoggingHandler implements Flushable {
 
     @Override
     public void flush() {
+        LogItem currentItem;
+        while ((currentItem = unprocessedQueue.poll()) != null) {
+            process(currentItem);
+        }
+
         TextChannel loggingChannel = channelSupplier.get();
         if (loggingChannel != null) {
             LogItem logItem;
             while ((logItem = messageQueue.poll()) != null) {
+                if (logItem.getMessage() == null && logItem.getThrowable() == null) {
+                    // Nothing to log, likely due to being cleared during formatting
+                    continue;
+                }
+
                 if (logItem.getFormattedLength(config) > LogItem.CLIPPING_MAX_LENGTH) {
                     throw new IllegalStateException("Log item longer than Discord's max content length: " + logItem);
                 }
