@@ -35,7 +35,7 @@ ChannelLoggingHandler handler = new ChannelLoggingHandler(() -> jda.getTextChann
 <dependency>
     <groupId>me.scarsz</groupId>
     <artifactId>jdaappender</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1-SNAPSHOT</version>
 </dependency>
 ```
 
