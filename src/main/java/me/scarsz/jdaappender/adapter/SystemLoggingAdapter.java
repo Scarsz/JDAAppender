@@ -8,12 +8,12 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.PrintStream;
 
-public class StandardLoggingAdapter {
+public class SystemLoggingAdapter {
 
     @Getter private final LogStream outStream;
     @Getter private final LogStream errStream;
 
-    public StandardLoggingAdapter(ChannelLoggingHandler handler) {
+    public SystemLoggingAdapter(ChannelLoggingHandler handler) {
         this.outStream = new LogStream(System.out, "SOUT", LogLevel.INFO, handler);
         this.errStream = new LogStream(System.err, "SERR", LogLevel.ERROR, handler);
     }

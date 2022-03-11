@@ -8,9 +8,9 @@ import javax.security.auth.login.LoginException;
 import java.io.PrintStream;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class RandomDataExample {
+public class LongDataExample {
 
-    public static void main(String[] args) throws LoginException, InterruptedException {
+    public static void main(String[] args) throws LoginException {
         // initialize JDA
         JDA jda = JDABuilder.createDefault(System.getenv("TOKEN")).build();
 
@@ -22,22 +22,14 @@ public class RandomDataExample {
             handlerConfig.mapLoggerName("net.dv8tion.jda", "JDA");
         }).attachSystemLogging().schedule();
 
-        // enqueue a bunch of random log messages
-        int count = ThreadLocalRandom.current().nextInt(100, 500);
+        // enqueue long random, log messages
+        int count = ThreadLocalRandom.current().nextInt(5, 15);
         for (int i = 0; i < count; i++) {
-            double random = ThreadLocalRandom.current().nextDouble(1);
-            String randomCharacters = randomAlphanumeric(100, 250);
-
-            PrintStream stream = random > .5 ? System.out : System.err;
+            String randomCharacters = randomAlphanumeric(100, 10000);
+            PrintStream stream = ThreadLocalRandom.current().nextDouble(1) > .5 ? System.out : System.err;
             stream.println(
-                    "Test message " + (i + 1) + ": " + (ThreadLocalRandom.current().nextDouble() > .9
-                            ? "https://lorem.ipsum/#" + randomCharacters.substring(0, ThreadLocalRandom.current().nextInt(100))
-                            : "data[" + randomCharacters.length() + "] " + randomCharacters)
+                    "Test message " + (i + 1) + ": data[" + randomCharacters.length() + "] " + randomCharacters
             );
-
-            if (ThreadLocalRandom.current().nextDouble() < .5) {
-                Thread.sleep(1000);
-            }
         }
     }
 

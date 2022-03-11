@@ -1,30 +1,35 @@
 package me.scarsz.jdaappender;
 
 import lombok.Getter;
-import me.scarsz.jdaappender.adapter.StandardLoggingAdapter;
-import me.scarsz.jdaappender.adapter.slf4j.JavaLoggingAdapter;
-import me.scarsz.jdaappender.adapter.Log4JLoggingAdapter;
+import lombok.SneakyThrows;
+import me.scarsz.jdaappender.adapter.JavaLoggingAdapter;
+import me.scarsz.jdaappender.adapter.SystemLoggingAdapter;
+import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.TextChannel;
-import net.dv8tion.jda.api.requests.restaction.MessageAction;
-import org.apache.logging.log4j.LogManager;
+import net.dv8tion.jda.api.exceptions.ErrorResponseException;
+import net.dv8tion.jda.api.requests.ErrorResponse;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.slf4j.impl.StaticLoggerBinder;
 
-import javax.annotation.CheckReturnValue;
 import java.io.Flushable;
 import java.io.PrintStream;
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 public class ChannelLoggingHandler implements Flushable {
 
+    @Getter private ScheduledExecutorService executor;
     @Getter private ScheduledFuture<?> scheduledFuture;
 
     /**
@@ -32,7 +37,7 @@ public class ChannelLoggingHandler implements Flushable {
      * @return this channel logging handler
      */
     public ChannelLoggingHandler schedule() {
-        return schedule(1, TimeUnit.SECONDS);
+        return schedule(1500, TimeUnit.MILLISECONDS);
     }
     /**
      * Schedule the handler to asynchronously flush to the logging channel every {period} {unit}.
@@ -42,8 +47,18 @@ public class ChannelLoggingHandler implements Flushable {
      * @return this channel logging handler
      */
     public ChannelLoggingHandler schedule(long period, @NotNull TimeUnit unit) {
+        shutdownExecutor(); // Stop the existing executor, if one exists
+        if (executor == null) {
+            executor = Executors.newSingleThreadScheduledExecutor();
+        }
         if (scheduledFuture == null) {
-            scheduledFuture = Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(this::flush, period, period, unit);
+            scheduledFuture = executor.scheduleAtFixedRate(() -> {
+                try {
+                    this.flush();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }, period, period, unit);
         }
         return this;
     }
@@ -55,7 +70,9 @@ public class ChannelLoggingHandler implements Flushable {
 
     @Getter private final HandlerConfig config = new HandlerConfig();
     @Getter private final Deque<LogItem> messageQueue = new LinkedList<>();
+    private final Deque<LogItem> unprocessedQueue = new LinkedList<>();
     @Getter private final Set<LogItem> stack = new LinkedHashSet<>();
+    @Getter private final AtomicBoolean dirtyBit = new AtomicBoolean();
     @Getter private Supplier<TextChannel> channelSupplier;
     private final Set<Runnable> detachRunnables = new HashSet<>();
     private Message currentMessage = null;
@@ -69,28 +86,75 @@ public class ChannelLoggingHandler implements Flushable {
     }
 
     public void enqueue(LogItem item) {
-        LogItem overflow = item.clip(config);
+        unprocessedQueue.add(item);
+    }
+
+    private void process(LogItem item) {
+        if (!config.getLogLevels().contains(item.getLevel())) return;
+        if (config.resolveLoggerName(item.getLogger()) == null) return;
+
+        // check for any filtering transformers
+        for (Map.Entry<Predicate<LogItem>, Function<String, String>> entry : config.getMessageTransformers().entrySet()) {
+            if (entry.getKey().test(item) && entry.getValue().apply(item.getMessage()) == null) {
+                return;
+            }
+        }
+
+        // allow transformers to modify log message if no filters denied it
+        for (Map.Entry<Predicate<LogItem>, Function<String, String>> entry : config.getMessageTransformers().entrySet()) {
+            if (entry.getKey().test(item)) {
+                item.setMessage(entry.getValue().apply(item.getMessage()));
+            }
+        }
+
+        Set<LogItem> clipped = item.clip(config, (int) (Math.ceil((double) (10_000 - Message.MAX_CONTENT_LENGTH) / Message.MAX_CONTENT_LENGTH)));
         messageQueue.add(item);
-        if (overflow != null) enqueue(overflow);
+        messageQueue.addAll(clipped);
     }
 
     @Override
     public void flush() {
+        LogItem currentItem;
+        while ((currentItem = unprocessedQueue.poll()) != null) {
+            process(currentItem);
+        }
+
         TextChannel loggingChannel = channelSupplier.get();
-        if (loggingChannel != null) {
+        if (loggingChannel != null && loggingChannel.getJDA().getStatus() == JDA.Status.CONNECTED) {
             LogItem logItem;
             while ((logItem = messageQueue.poll()) != null) {
+                if (logItem.getMessage() == null && logItem.getThrowable() == null) {
+                    // Nothing to log, likely due to being cleared during formatting
+                    continue;
+                }
+
+                if (logItem.getFormattedLength(config) > LogItem.CLIPPING_MAX_LENGTH) {
+                    throw new IllegalStateException("Log item longer than Discord's max content length: " + logItem);
+                }
+
                 if (!canFit(logItem)) {
-                    updateMessage().complete();
-                    currentMessage = null;
-                    stack.clear();
+                    if (stack.size() == 0) throw new IllegalStateException("Can't fit LogItem into empty stack: " + logItem);
+                    dumpStack();
                 }
 
                 stack.add(logItem);
+                dirtyBit.set(true);
             }
 
-            currentMessage = updateMessage().complete();
+            if (dirtyBit.get() && stack.size() > 0) {
+                currentMessage = updateMessage();
+                dirtyBit.set(false);
+            }
         }
+    }
+
+    /**
+     * Push the current LogItem stack to Discord, then dump the stack, starting a new message.
+     */
+    public void dumpStack() {
+        if (stack.size() > 0) updateMessage();
+        stack.clear();
+        currentMessage = null;
     }
 
     /**
@@ -113,7 +177,7 @@ public class ChannelLoggingHandler implements Flushable {
             lengthSum += "- ".length() * stack.size(); // language symbols
         }
 
-        if (config.isAllowLinkEmbeds()) {
+        if (config.isSplitCodeBlockForLinks()) {
             lengthSum += "```".length() * 2;
             lengthSum += "\n".length() * 2;
             if (config.isColored()) {
@@ -124,13 +188,12 @@ public class ChannelLoggingHandler implements Flushable {
         return lengthSum + logItem.format(config).length() + 5 <= Message.MAX_CONTENT_LENGTH;
     }
 
-    @CheckReturnValue
-    private MessageAction updateMessage() {
+    private Message updateMessage() {
         if (stack.size() == 0) throw new IllegalStateException("No messages on stack");
 
         StringJoiner joiner = new StringJoiner("\n");
         for (LogItem item : stack) {
-            boolean willSplit = config.isAllowLinkEmbeds() && URL_PATTERN.matcher(item.getMessage()).find();
+            boolean willSplit = config.isSplitCodeBlockForLinks() && item.getMessage() != null && URL_PATTERN.matcher(item.getMessage()).find();
 
             String formatted = item.format(config);
 
@@ -153,13 +216,19 @@ public class ChannelLoggingHandler implements Flushable {
         // safeguard against empty lines
         while (full.contains("\n\n")) full = full.replace("\n\n", "\n");
 
-        MessageAction action;
-        if (currentMessage == null) {
-            action = channelSupplier.get().sendMessage(full);
-        } else {
-            action = currentMessage.editMessage(full);
+        if (currentMessage != null) {
+            try {
+                return currentMessage.editMessage(full).complete();
+            } catch (ErrorResponseException e) {
+                if (e.getErrorResponse() == ErrorResponse.UNKNOWN_MESSAGE) {
+                    currentMessage = null;
+                } else {
+                    throw e;
+                }
+            }
         }
-        return action;
+
+        return channelSupplier.get().sendMessage(full).complete();
     }
 
     /**
@@ -179,23 +248,59 @@ public class ChannelLoggingHandler implements Flushable {
                 .complete();
     }
 
-    public ChannelLoggingHandler attach() {
-        // slf4j?
-        try {
-            Class<?> logFactoryClass = Class.forName(StaticLoggerBinder.getSingleton().getLoggerFactoryClassStr());
-            switch (logFactoryClass.getSimpleName()) {
-                case "JDK14LoggerFactory": return attachJavaLogging();
-                //TODO more SLF4J implementations
-            }
-        } catch (Throwable ignored) {}
+    /**
+     * Shutdown the internal executor, if active.
+     * @see #schedule()
+     * @see #schedule(long, TimeUnit)
+     */
+    public void shutdownExecutor() {
+        if (scheduledFuture != null) {
+            scheduledFuture.cancel(true);
+            scheduledFuture = null;
+        }
+        if (executor != null) {
+            executor.shutdown();
+            executor = null;
+        }
+    }
 
+    /**
+     * Shuts down the internal executor, and detaches attached loggers.
+     * @see #shutdownExecutor()
+     * @see #detach()
+     */
+    public void shutdown() {
+        detach();
+        shutdownExecutor();
+    }
+
+    public ChannelLoggingHandler attach() {
         // log4j?
         try {
             Class.forName("org.apache.logging.log4j.core.Logger");
             return attachLog4jLogging();
         } catch (Throwable ignored) {}
 
-        return attachStandardLogging();
+        // logback?
+        try {
+            Class.forName("ch.qos.logback.core.Appender");
+            return attachLogbackLogging();
+        } catch (Throwable ignored) {}
+
+        // slf4j?
+        try {
+            Class<?> logFactoryClass = Class.forName(org.slf4j.impl.StaticLoggerBinder.getSingleton().getLoggerFactoryClassStr());
+            switch (logFactoryClass.getSimpleName()) {
+                case "JDK14LoggerFactory": return attachJavaLogging();
+                case "ContextSelectorStaticBinder": return attachLogbackLogging();
+                //TODO more SLF4J implementations
+                default:
+                    System.err.println("SLF4J Logger factory " + logFactoryClass.getName() + " is not supported");
+                    enqueue(new LogItem("Appender", LogLevel.ERROR, "SLF4J Logger factory " + logFactoryClass.getName() + " is not supported"));
+            }
+        } catch (Throwable ignored) {}
+
+        return attachSystemLogging();
     }
     public void detach() {
         Iterator<Runnable> iterator = detachRunnables.iterator();
@@ -205,8 +310,8 @@ public class ChannelLoggingHandler implements Flushable {
             iterator.remove();
         }
     }
-    public ChannelLoggingHandler attachStandardLogging() {
-        StandardLoggingAdapter adapter = new StandardLoggingAdapter(this);
+    public ChannelLoggingHandler attachSystemLogging() {
+        SystemLoggingAdapter adapter = new SystemLoggingAdapter(this);
         PrintStream originalOut = System.out;
         PrintStream originalErr = System.err;
         System.setOut(adapter.getOutStream());
@@ -223,11 +328,45 @@ public class ChannelLoggingHandler implements Flushable {
         detachRunnables.add(() -> java.util.logging.Logger.getLogger("").removeHandler(adapter));
         return this;
     }
+    @SneakyThrows
     public ChannelLoggingHandler attachLog4jLogging() {
-        Log4JLoggingAdapter adapter = new Log4JLoggingAdapter(this);
-        org.apache.logging.log4j.core.Logger rootLogger = (org.apache.logging.log4j.core.Logger) LogManager.getRootLogger();
-        rootLogger.addAppender(adapter);
-        detachRunnables.add(() -> rootLogger.removeAppender(adapter));
+        org.apache.logging.log4j.Logger rootLogger = org.apache.logging.log4j.LogManager.getRootLogger();
+        Method addAppenderMethod = rootLogger.getClass().getMethod("addAppender", org.apache.logging.log4j.core.Appender.class);
+        Method removeAppenderMethod = rootLogger.getClass().getMethod("removeAppender", org.apache.logging.log4j.core.Appender.class);
+
+        Object adapter = Class.forName("me.scarsz.jdaappender.adapter.Log4JLoggingAdapter")
+                .getConstructor(ChannelLoggingHandler.class)
+                .newInstance(this);
+        addAppenderMethod.invoke(rootLogger, adapter);
+
+        detachRunnables.add(() -> {
+            try {
+                removeAppenderMethod.invoke(rootLogger, adapter);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+        return this;
+    }
+    @SneakyThrows
+    public ChannelLoggingHandler attachLogbackLogging() {
+        ch.qos.logback.classic.LoggerContext loggerContext = (ch.qos.logback.classic.LoggerContext) org.slf4j.LoggerFactory.getILoggerFactory();
+        org.slf4j.Logger rootLogger = loggerContext.getLogger(ch.qos.logback.classic.Logger.ROOT_LOGGER_NAME);
+        Method addAppenderMethod = rootLogger.getClass().getMethod("addAppender", ch.qos.logback.core.Appender.class);
+        Method detachAppenderMethod = rootLogger.getClass().getMethod("detachAppender", ch.qos.logback.core.Appender.class);
+
+        Object adapter = Class.forName("me.scarsz.jdaappender.adapter.LogbackLoggingAdapter")
+                .getConstructor(ChannelLoggingHandler.class, ch.qos.logback.classic.LoggerContext.class)
+                .newInstance(this, loggerContext);
+        addAppenderMethod.invoke(rootLogger, adapter);
+
+        detachRunnables.add(() -> {
+            try {
+                detachAppenderMethod.invoke(rootLogger, adapter);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
         return this;
     }
 

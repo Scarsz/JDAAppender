@@ -1,4 +1,4 @@
-package me.scarsz.jdaappender.adapter.slf4j;
+package me.scarsz.jdaappender.adapter;
 
 import me.scarsz.jdaappender.ChannelLoggingHandler;
 import me.scarsz.jdaappender.LogItem;
@@ -22,13 +22,11 @@ public class JavaLoggingAdapter extends Handler {
 
     @Override
     public void publish(LogRecord record) {
-        LogLevel level = record.getLevel() == Level.INFO
-                ? LogLevel.INFO
-                : record.getLevel() == Level.WARNING
-                        ? LogLevel.WARN
-                        : record.getLevel() == Level.SEVERE
-                                ? LogLevel.ERROR
-                                : null;
+        LogLevel level = record.getLevel() == Level.INFO ? LogLevel.INFO
+                : record.getLevel() == Level.WARNING ? LogLevel.WARN
+                : record.getLevel() == Level.SEVERE ? LogLevel.ERROR
+                : record.getLevel() == Level.FINE ? LogLevel.DEBUG
+                : null;
 
         if (level != null) {
             handler.enqueue(new LogItem(

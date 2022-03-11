@@ -1,9 +1,18 @@
 package me.scarsz.jdaappender;
 
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.Setter;
 import net.dv8tion.jda.api.entities.Message;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -11,13 +20,18 @@ import java.util.regex.Pattern;
  */
 public class LogItem {
 
+    public static final int CLIPPING_MAX_LENGTH = Message.MAX_CONTENT_LENGTH - 20;
+
     @Getter private final String logger;
     @Getter private final long timestamp;
     @Getter private final LogLevel level;
-    @Getter private String message;
-    @Getter private final Throwable throwable;
+    @Getter @Setter(AccessLevel.PACKAGE) @Nullable private String message;
+    @Getter @Nullable private final Throwable throwable;
 
-    public LogItem(String logger, long timestamp, LogLevel level, String message, Throwable throwable) {
+    public LogItem(String logger, LogLevel level, String message) {
+        this(logger, System.currentTimeMillis(), level, message, null);
+    }
+    public LogItem(String logger, long timestamp, LogLevel level, @Nullable String message, @Nullable Throwable throwable) {
         this.logger = logger;
         this.timestamp = timestamp;
         this.level = level;
@@ -31,9 +45,24 @@ public class LogItem {
      * @return the human-readable, formatted line representing this LogItem
      */
     protected String format(@NotNull HandlerConfig config) {
-        return (config.getPrefixer() != null ? config.getPrefixer().apply(this) : "")
-                + message
-                + (config.getSuffixer() != null ? config.getSuffixer().apply(this) : "");
+        StringBuilder builder = new StringBuilder();
+
+        if (config.getPrefixer() != null) builder.append(config.getPrefixer().apply(this));
+        builder.append(message);
+        if (config.getSuffixer() != null) builder.append(config.getSuffixer().apply(this));
+        if (throwable != null) {
+            try (StringWriter stringWriter = new StringWriter()) {
+                try (PrintWriter printWriter = new PrintWriter(stringWriter)) {
+                    throwable.printStackTrace(printWriter);
+
+                    builder.append('\n');
+                    builder.append(stringWriter);
+                }
+            } catch (IOException ignored) {} // not possible
+        }
+
+        String s = builder.toString();
+        return s.length() > CLIPPING_MAX_LENGTH ? s.substring(0, CLIPPING_MAX_LENGTH) : s;
     }
 
     /**
@@ -43,14 +72,40 @@ public class LogItem {
      *         null if no clipping was performed
      */
     protected LogItem clip(@NotNull HandlerConfig config) {
-        int fullLength = format(config).length();
-        if (fullLength >= Message.MAX_CONTENT_LENGTH - 15) {
-            String original = message;
-            message = substring(message, 0, fullLength);
-            return new LogItem(logger, timestamp, level, substring(original, fullLength), throwable);
-        } else {
-            return null;
+        Iterator<LogItem> clip = clip(config, 1).iterator();
+        return clip.hasNext() ? clip.next() : null;
+    }
+    /**
+     * Clip the log item's message content into a maximum of specified number of log items, if it exceeds
+     * {@link Message#MAX_CONTENT_LENGTH}
+     * @param config the appender config
+     * @param max the maximum amount of {@link LogItem}s to clip from this message
+     * @return a set containing {@link LogItem}s formed from excess characters in this LogItem,
+     *         empty set if no clipping was performed
+     */
+    protected Set<LogItem> clip(@NotNull HandlerConfig config, int max) {
+        Set<LogItem> items = new LinkedHashSet<>();
+
+        LogItem bottom = this;
+        int formattingLength = config.getFormattingLength(bottom);
+        int i = 0;
+        while (message != null && message.length() > 0 && i < max && message.length() + formattingLength >= CLIPPING_MAX_LENGTH) {
+            formattingLength = config.getFormattingLength(bottom);
+            int cutoff = CLIPPING_MAX_LENGTH - formattingLength;
+            int pulledCharacterCount = Math.min(cutoff, bottom.message.length());
+
+            String remaining = substring(bottom.message, pulledCharacterCount);
+            bottom.message = substring(bottom.message, 0, pulledCharacterCount);
+
+            if (remaining == null || remaining.length() == 0) break;
+            if (++i == max) break;
+
+            bottom = clone(remaining);
+            if (bottom.message == null) return items;
+            items.add(bottom);
         }
+
+        return items;
     }
 
     /**
@@ -61,14 +116,35 @@ public class LogItem {
         return colorPattern.matcher(str).replaceAll("");
     }
 
-    private String substring(String str, int start) {
+    private @Nullable String substring(String str, int start) {
         return substring(str, start, str.length());
     }
-    private static String substring(String str, int start, int end) {
+    private static @Nullable String substring(String str, int start, int end) {
+        if (str == null) return null;
         if (end < 0) end += str.length();
         if (start < 0) start = 0;
         if (end > str.length()) end = str.length();
         return start > end ? "" : str.substring(start, end);
+    }
+
+    public int getFormattedLength(HandlerConfig config) {
+        return format(config).length();
+    }
+
+    public LogItem clone(String message) {
+        return new LogItem(logger, timestamp, level, message, throwable);
+    }
+
+    @Override
+    public String toString() {
+        return "LogItem{" +
+                "logger='" + logger + '\'' +
+                ", level=" + level +
+                (message != null
+                        ? ", message[" + message.length() + "]='" + (message.length() <= 100 ? message : message.substring(0, 100)) + '\''
+                        : ", message[]=\"null"
+                ) +
+                '}';
     }
 
 }
