@@ -273,24 +273,62 @@ public class HandlerConfig {
     @Getter @Setter private EnumSet<LogLevel> logLevels = EnumSet.complementOf(EnumSet.of(LogLevel.DEBUG));
 
     /**
+     * If code blocks should be used. Required for {@link #setSplitCodeBlockForLinks(boolean)}, {@link #setAllowLinkEmbeds(boolean)} and {@link #setColored(boolean)}.
+     * Default true.
+     */
+    @Getter @Setter private boolean useCodeBlocks = true;
+
+    /**
      * Whether the logging handler should format log items which contain a URL to be outside the output code blocks.
      * This is useful for if you want links to be clickable or not in the Discord client.
      * Has the tradeoff that the log item will have no coloring/monospace font.
      * Default false.
+     * @see #useCodeBlocks
      */
-    @Getter @Setter private boolean splitCodeBlockForLinks = false;
+    @Setter private boolean splitCodeBlockForLinks = false;
+
+    /**
+     * Whether the logging handler should format log items which contain a URL to be outside the output code blocks.
+     * This is useful for if you want links to be clickable or not in the Discord client.
+     * Has the tradeoff that the log item will have no coloring/monospace font.
+     * Default false.
+     * @see #useCodeBlocks
+     */
+    public boolean isSplitCodeBlockForLinks() {
+        return splitCodeBlockForLinks && useCodeBlocks;
+    }
 
     /**
      * Whether the logging handler should allow Discord to show embeds for links when {@link #splitCodeBlockForLinks} is enabled.
      * Default true.
+     * @see #useCodeBlocks
      */
-    @Getter @Setter private boolean allowLinkEmbeds = true;
+    @Setter private boolean allowLinkEmbeds = true;
+
+    /**
+     * Whether the logging handler should allow Discord to show embeds for links when {@link #splitCodeBlockForLinks} is enabled.
+     * Default true.
+     * @see #useCodeBlocks
+     */
+    public boolean isAllowLinkEmbeds() {
+        return allowLinkEmbeds && useCodeBlocks;
+    }
 
     /**
      * Whether the logging handler should format log items with code syntax to highlight log levels in distinct colors.
      * Default true.
+     * @see #useCodeBlocks
      */
-    @Getter @Setter private boolean colored = true;
+    @Setter private boolean colored = true;
+
+    /**
+     * Whether the logging handler should format log items with code syntax to highlight log levels in distinct colors.
+     * Default true.
+     * @see #useCodeBlocks
+     */
+    public boolean isColored() {
+        return colored && useCodeBlocks;
+    }
 
     /**
      * Whether the logging handler should truncate {@link LogItem}s with a formatted length longer than {@link LogItem#CLIPPING_MAX_LENGTH}.

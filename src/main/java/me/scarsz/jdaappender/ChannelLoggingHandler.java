@@ -16,10 +16,7 @@ import java.io.Flushable;
 import java.io.PrintStream;
 import java.lang.reflect.Method;
 import java.util.*;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -70,7 +67,7 @@ public class ChannelLoggingHandler implements Flushable {
 
     @Getter private final HandlerConfig config = new HandlerConfig();
     @Getter private final Deque<LogItem> messageQueue = new LinkedList<>();
-    private final Deque<LogItem> unprocessedQueue = new LinkedList<>();
+    private final Deque<LogItem> unprocessedQueue = new ConcurrentLinkedDeque<>();
     @Getter private final Set<LogItem> stack = new LinkedHashSet<>();
     @Getter private final AtomicBoolean dirtyBit = new AtomicBoolean();
     @Getter private Supplier<TextChannel> channelSupplier;
@@ -169,8 +166,10 @@ public class ChannelLoggingHandler implements Flushable {
             int length = formatted.length();
             lengthSum += length;
         }
-        lengthSum += "```".length() * 2; // code block backticks
-        lengthSum += "\n".length() * (stack.size() + 1); // newlines (one per element + 1)
+
+        boolean codeBlocks = config.isUseCodeBlocks();
+        if (codeBlocks) lengthSum += "```".length() * 2; // code block backticks
+        lengthSum += "\n".length() * (stack.size() + (codeBlocks ? 1 : -1)); // newlines (one per element + 1 (with code blocks) or - 1 (without code blocks))
 
         if (config.isColored()) {
             lengthSum += "diff".length(); // language
@@ -207,11 +206,15 @@ public class ChannelLoggingHandler implements Flushable {
                 joiner.add(formatted);
             }
         }
-        String full = "```" + (config.isColored() ? "diff" : "") + "\n" + joiner + "```";
 
-        // safeguard against empty codeblocks
-        full = full.replace("```" + (config.isColored() ? "diff" : "") + "```", "");
-        full = full.replace("```" + (config.isColored() ? "diff" : "") + "\n```", "");
+        boolean codeBlock = config.isUseCodeBlocks();
+        String full = codeBlock ? "```" + (config.isColored() ? "diff" : "") + "\n" + joiner + "```" : joiner.toString();
+
+        if (codeBlock) {
+            // safeguard against empty codeblocks
+            full = full.replace("```" + (config.isColored() ? "diff" : "") + "```", "");
+            full = full.replace("```" + (config.isColored() ? "diff" : "") + "\n```", "");
+        }
 
         // safeguard against empty lines
         while (full.contains("\n\n")) full = full.replace("\n\n", "\n");
