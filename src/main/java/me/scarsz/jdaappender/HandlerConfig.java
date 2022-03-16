@@ -373,16 +373,16 @@ public class HandlerConfig {
         return builder.toString();
     }
     /**
-     * See {@link #pad(String, int)}. Shortcut for padding logger names.
+     * See {@link #pad(String, int)}. Returns input name when {@link #useCodeBlocks} is {@code false}. Shortcut for padding logger names.
      */
     public String padLoggerName(String loggerName) {
-        return pad(loggerName, loggerNamePadding);
+        return useCodeBlocks ? pad(loggerName, loggerNamePadding) : loggerName;
     }
     /**
-     * See {@link #pad(String, int)}. Shortcut for padding log level names.
+     * See {@link #pad(String, int)}. Returns input name when {@link #useCodeBlocks} is {@code false}. Shortcut for padding log level names.
      */
     public String padLevelName(String levelName) {
-        return pad(levelName, LogLevel.MAX_NAME_LENGTH);
+        return useCodeBlocks ? pad(levelName, LogLevel.MAX_NAME_LENGTH) : levelName;
     }
 
 }
