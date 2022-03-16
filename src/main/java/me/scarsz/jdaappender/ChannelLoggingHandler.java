@@ -16,10 +16,7 @@ import java.io.Flushable;
 import java.io.PrintStream;
 import java.lang.reflect.Method;
 import java.util.*;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -70,7 +67,7 @@ public class ChannelLoggingHandler implements Flushable {
 
     @Getter private final HandlerConfig config = new HandlerConfig();
     @Getter private final Deque<LogItem> messageQueue = new LinkedList<>();
-    private final Deque<LogItem> unprocessedQueue = new LinkedList<>();
+    private final Deque<LogItem> unprocessedQueue = new ConcurrentLinkedDeque<>();
     @Getter private final Set<LogItem> stack = new LinkedHashSet<>();
     @Getter private final AtomicBoolean dirtyBit = new AtomicBoolean();
     @Getter private Supplier<TextChannel> channelSupplier;
