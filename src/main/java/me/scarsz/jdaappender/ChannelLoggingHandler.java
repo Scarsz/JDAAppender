@@ -166,8 +166,10 @@ public class ChannelLoggingHandler implements Flushable {
             int length = formatted.length();
             lengthSum += length;
         }
-        lengthSum += "```".length() * 2; // code block backticks
-        lengthSum += "\n".length() * (stack.size() + 1); // newlines (one per element + 1)
+
+        boolean codeBlocks = config.isUseCodeBlocks();
+        if (codeBlocks) lengthSum += "```".length() * 2; // code block backticks
+        lengthSum += "\n".length() * (stack.size() + (codeBlocks ? 1 : -1)); // newlines (one per element + 1 (with code blocks) or - 1 (without code blocks))
 
         if (config.isColored()) {
             lengthSum += "diff".length(); // language
@@ -204,11 +206,15 @@ public class ChannelLoggingHandler implements Flushable {
                 joiner.add(formatted);
             }
         }
-        String full = "```" + (config.isColored() ? "diff" : "") + "\n" + joiner + "```";
 
-        // safeguard against empty codeblocks
-        full = full.replace("```" + (config.isColored() ? "diff" : "") + "```", "");
-        full = full.replace("```" + (config.isColored() ? "diff" : "") + "\n```", "");
+        boolean codeBlock = config.isUseCodeBlocks();
+        String full = codeBlock ? "```" + (config.isColored() ? "diff" : "") + "\n" + joiner + "```" : joiner.toString();
+
+        if (codeBlock) {
+            // safeguard against empty codeblocks
+            full = full.replace("```" + (config.isColored() ? "diff" : "") + "```", "");
+            full = full.replace("```" + (config.isColored() ? "diff" : "") + "\n```", "");
+        }
 
         // safeguard against empty lines
         while (full.contains("\n\n")) full = full.replace("\n\n", "\n");
