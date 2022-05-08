@@ -5,7 +5,9 @@ import lombok.SneakyThrows;
 import me.scarsz.jdaappender.adapter.JavaLoggingAdapter;
 import me.scarsz.jdaappender.adapter.SystemLoggingAdapter;
 import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.entities.GuildMessageChannel;
 import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.MessageChannel;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.exceptions.ErrorResponseException;
 import net.dv8tion.jda.api.requests.ErrorResponse;
@@ -70,14 +72,14 @@ public class ChannelLoggingHandler implements Flushable {
     private final Deque<LogItem> unprocessedQueue = new ConcurrentLinkedDeque<>();
     @Getter private final Set<LogItem> stack = new LinkedHashSet<>();
     @Getter private final AtomicBoolean dirtyBit = new AtomicBoolean();
-    @Getter private Supplier<TextChannel> channelSupplier;
+    @Getter private Supplier<MessageChannel> channelSupplier;
     private final Set<Runnable> detachRunnables = new HashSet<>();
     private Message currentMessage = null;
 
-    public ChannelLoggingHandler(@NotNull Supplier<TextChannel> channelSupplier) {
+    public ChannelLoggingHandler(@NotNull Supplier<MessageChannel> channelSupplier) {
         this(channelSupplier, null);
     }
-    public ChannelLoggingHandler(@NotNull Supplier<TextChannel> channelSupplier, @Nullable Consumer<HandlerConfig> configConsumer) {
+    public ChannelLoggingHandler(@NotNull Supplier<MessageChannel> channelSupplier, @Nullable Consumer<HandlerConfig> configConsumer) {
         this.channelSupplier = channelSupplier;
         if (configConsumer != null) configConsumer.accept(this.config);
     }
@@ -116,7 +118,7 @@ public class ChannelLoggingHandler implements Flushable {
             process(currentItem);
         }
 
-        TextChannel loggingChannel = channelSupplier.get();
+        MessageChannel loggingChannel = channelSupplier.get();
         if (loggingChannel != null && loggingChannel.getJDA().getStatus() == JDA.Status.CONNECTED) {
             LogItem logItem;
             while ((logItem = messageQueue.poll()) != null) {
@@ -241,7 +243,12 @@ public class ChannelLoggingHandler implements Flushable {
      * The new channel will <strong>not</strong> have the same channel ID.
      */
     public void recreateChannel(@Nullable String reason) {
-        TextChannel channel = channelSupplier.get();
+        MessageChannel uncheckedChannel = channelSupplier.get();
+        if (!(uncheckedChannel instanceof TextChannel)) {
+            throw new IllegalStateException("recreateChannel is only implemented for instances of TextChannel");
+        }
+
+        TextChannel channel = (TextChannel) uncheckedChannel;
         channel.createCopy()
                 .setPosition(channel.getPositionRaw())
                 .flatMap(textChannel -> {
