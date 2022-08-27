@@ -149,7 +149,7 @@ public class ChannelLoggingHandler implements Flushable {
      * Push the current LogItem stack to Discord, then dump the stack, starting a new message.
      */
     public void dumpStack() {
-        if (stack.size() > 0) updateMessage();
+        try { if (stack.size() > 0) updateMessage(); } catch (IllegalStateException ignored) {}
         stack.clear();
         currentMessage = null;
     }
@@ -187,8 +187,11 @@ public class ChannelLoggingHandler implements Flushable {
         return lengthSum + logItem.format(config).length() + 5 <= Message.MAX_CONTENT_LENGTH;
     }
 
-    private Message updateMessage() {
+    private Message updateMessage() throws IllegalStateException {
         if (stack.size() == 0) throw new IllegalStateException("No messages on stack");
+
+        TextChannel channel = channelSupplier.get();
+        if (channel == null) throw new IllegalStateException("Channel unavailable");
 
         StringJoiner joiner = new StringJoiner("\n");
         for (LogItem item : stack) {
@@ -231,7 +234,7 @@ public class ChannelLoggingHandler implements Flushable {
             }
         }
 
-        return channelSupplier.get().sendMessage(full).complete();
+        return channel.sendMessage(full).complete();
     }
 
     /**
@@ -242,6 +245,7 @@ public class ChannelLoggingHandler implements Flushable {
      */
     public void recreateChannel(@Nullable String reason) {
         TextChannel channel = channelSupplier.get();
+        if (channel == null) throw new IllegalStateException("Channel unavailable");
         channel.createCopy()
                 .setPosition(channel.getPositionRaw())
                 .flatMap(textChannel -> {
