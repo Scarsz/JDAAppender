@@ -2,6 +2,7 @@ package me.scarsz.jdaappender;
 
 import lombok.Getter;
 import lombok.SneakyThrows;
+import lombok.Synchronized;
 import me.scarsz.jdaappender.adapter.JavaLoggingAdapter;
 import me.scarsz.jdaappender.adapter.SystemLoggingAdapter;
 import net.dv8tion.jda.api.JDA;
@@ -119,28 +120,30 @@ public class ChannelLoggingHandler implements Flushable {
         TextChannel loggingChannel = channelSupplier.get();
         if (loggingChannel != null && loggingChannel.getJDA().getStatus() == JDA.Status.CONNECTED) {
             LogItem logItem;
-            while ((logItem = messageQueue.poll()) != null) {
-                if (logItem.getMessage() == null && logItem.getThrowable() == null) {
-                    // Nothing to log, likely due to being cleared during formatting
-                    continue;
+            synchronized (stack) {
+                while ((logItem = messageQueue.poll()) != null) {
+                    if (logItem.getMessage() == null && logItem.getThrowable() == null) {
+                        // Nothing to log, likely due to being cleared during formatting
+                        continue;
+                    }
+
+                    if (logItem.getFormattedLength(config) > LogItem.CLIPPING_MAX_LENGTH) {
+                        throw new IllegalStateException("Log item longer than Discord's max content length: " + logItem);
+                    }
+
+                    if (!canFit(logItem)) {
+                        if (stack.size() == 0) throw new IllegalStateException("Can't fit LogItem into empty stack: " + logItem);
+                        dumpStack();
+                    }
+
+                    stack.add(logItem);
+                    dirtyBit.set(true);
                 }
 
-                if (logItem.getFormattedLength(config) > LogItem.CLIPPING_MAX_LENGTH) {
-                    throw new IllegalStateException("Log item longer than Discord's max content length: " + logItem);
+                if (dirtyBit.get() && stack.size() > 0) {
+                    currentMessage = updateMessage();
+                    dirtyBit.set(false);
                 }
-
-                if (!canFit(logItem)) {
-                    if (stack.size() == 0) throw new IllegalStateException("Can't fit LogItem into empty stack: " + logItem);
-                    dumpStack();
-                }
-
-                stack.add(logItem);
-                dirtyBit.set(true);
-            }
-
-            if (dirtyBit.get() && stack.size() > 0) {
-                currentMessage = updateMessage();
-                dirtyBit.set(false);
             }
         }
     }
@@ -148,8 +151,11 @@ public class ChannelLoggingHandler implements Flushable {
     /**
      * Push the current LogItem stack to Discord, then dump the stack, starting a new message.
      */
+    @Synchronized("stack")
     public void dumpStack() {
-        try { if (stack.size() > 0) updateMessage(); } catch (IllegalStateException ignored) {}
+        try {
+            if (stack.size() > 0) updateMessage();
+        } catch (IllegalStateException ignored) {}
         stack.clear();
         currentMessage = null;
     }
@@ -159,6 +165,7 @@ public class ChannelLoggingHandler implements Flushable {
      * @param logItem the log item to check for fitment of
      * @return true if the log item will fit, false if it won't and a new stack + message will be started to accommodate
      */
+    @Synchronized("stack")
     public boolean canFit(LogItem logItem) {
         int lengthSum = 0;
         for (LogItem item : stack) {
@@ -188,25 +195,30 @@ public class ChannelLoggingHandler implements Flushable {
     }
 
     private Message updateMessage() throws IllegalStateException {
-        if (stack.size() == 0) throw new IllegalStateException("No messages on stack");
+        TextChannel channel;
+        StringJoiner joiner;
 
-        TextChannel channel = channelSupplier.get();
-        if (channel == null) throw new IllegalStateException("Channel unavailable");
+        synchronized (stack) {
+            if (stack.size() == 0) throw new IllegalStateException("No messages on stack");
 
-        StringJoiner joiner = new StringJoiner("\n");
-        for (LogItem item : stack) {
-            boolean willSplit = config.isSplitCodeBlockForLinks() && item.getMessage() != null && URL_PATTERN.matcher(item.getMessage()).find();
+            channel = channelSupplier.get();
+            if (channel == null) throw new IllegalStateException("Channel unavailable");
 
-            String formatted = item.format(config);
+            joiner = new StringJoiner("\n");
+            for (LogItem item : stack) {
+                boolean willSplit = config.isSplitCodeBlockForLinks() && item.getMessage() != null && URL_PATTERN.matcher(item.getMessage()).find();
 
-            if (!willSplit && config.isColored()) {
-                formatted = item.getLevel().getLevelSymbol() + " " + formatted;
-            }
+                String formatted = item.format(config);
 
-            if (willSplit) {
-                joiner.add("```\n" + formatted + "\n```" + (config.isColored() ? "diff" : ""));
-            } else {
-                joiner.add(formatted);
+                if (!willSplit && config.isColored()) {
+                    formatted = item.getLevel().getLevelSymbol() + " " + formatted;
+                }
+
+                if (willSplit) {
+                    joiner.add("```\n" + formatted + "\n```" + (config.isColored() ? "diff" : ""));
+                } else {
+                    joiner.add(formatted);
+                }
             }
         }
 
