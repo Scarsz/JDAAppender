@@ -16,27 +16,9 @@ jobs:
         with:
           distribution: 'adopt'
           java-version: 8
-      - uses: actions/cache@v2
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
-      - name: Set pom version to release
-        id: pom
-        run: |
-          mvn -B versions:set -DremoveSnapshot
-          echo "VERSION=$(mvn -q -Dexec.executable="echo" -Dexec.args='${project.version}' --non-recursive exec:exec) >> $GITHUB_ENV"
-
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub"
-          git commit -m "Release $VERSION" -a
+          cache: maven
       - name: Build & deploy to Nexus
         env:
           NEXUS_USER: ${{ secrets.NEXUS_USER }}
           NEXUS_PASS: ${{ secrets.NEXUS_PASS }}
         run: mvn --batch-mode --update-snapshots --settings deploy.xml deploy
-      - name: Push to master
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
