@@ -6,10 +6,9 @@ import lombok.Synchronized;
 import me.scarsz.jdaappender.adapter.JavaLoggingAdapter;
 import me.scarsz.jdaappender.adapter.SystemLoggingAdapter;
 import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.entities.GuildMessageChannel;
 import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.MessageChannel;
-import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.exceptions.ErrorResponseException;
 import net.dv8tion.jda.api.requests.ErrorResponse;
 import org.jetbrains.annotations.NotNull;
@@ -197,7 +196,7 @@ public class ChannelLoggingHandler implements Flushable {
     }
 
     private Message updateMessage() throws IllegalStateException {
-        TextChannel channel;
+        MessageChannel channel;
         StringJoiner joiner;
 
         synchronized (stack) {
