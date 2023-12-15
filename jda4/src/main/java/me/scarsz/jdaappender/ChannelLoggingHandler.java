@@ -133,7 +133,7 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
                     }
 
                     if (!canFit(logItem)) {
-                        if (stack.size() == 0) throw new IllegalStateException("Can't fit LogItem into empty stack: " + logItem);
+                        if (stack.isEmpty()) throw new IllegalStateException("Can't fit LogItem into empty stack: " + logItem);
                         dumpStack();
                     }
 
@@ -141,7 +141,7 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
                     dirtyBit.set(true);
                 }
 
-                if (dirtyBit.get() && stack.size() > 0) {
+                if (dirtyBit.get() && !stack.isEmpty()) {
                     currentMessage = updateMessage();
                     dirtyBit.set(false);
                 }
@@ -155,7 +155,7 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
     @Synchronized("stack")
     public void dumpStack() {
         try {
-            if (stack.size() > 0) updateMessage();
+            if (!stack.isEmpty()) updateMessage();
         } catch (IllegalStateException ignored) {}
         stack.clear();
         currentMessage = null;
@@ -200,7 +200,7 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
         StringJoiner joiner;
 
         synchronized (stack) {
-            if (stack.size() == 0) throw new IllegalStateException("No messages on stack");
+            if (stack.isEmpty()) throw new IllegalStateException("No messages on stack");
 
             channel = channelSupplier.get();
             if (channel == null) throw new IllegalStateException("Channel unavailable");
