@@ -50,7 +50,7 @@ public class LogItem {
         StringBuilder builder = new StringBuilder();
 
         if (config.getPrefixer() != null) builder.append(config.getPrefixer().apply(this));
-        if (config.isUseCodeBlocks()) builder.append(message); else builder.append(handler.escapeMarkdown(message));
+        builder.append(config.isUseCodeBlocks() ? message : handler.escapeMarkdown(message));
         if (config.getSuffixer() != null) builder.append(config.getSuffixer().apply(this));
         if (throwable != null) {
             try (StringWriter stringWriter = new StringWriter()) {
