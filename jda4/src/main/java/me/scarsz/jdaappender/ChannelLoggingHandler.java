@@ -238,7 +238,7 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
 
         if (currentMessage != null) {
             try {
-                currentMessage.editMessage(full).submit().get();
+                return currentMessage.editMessage(full).submit().get();
             } catch (ErrorResponseException e) {
                 if (e.getErrorResponse() == ErrorResponse.UNKNOWN_MESSAGE) {
                     currentMessage = null;
