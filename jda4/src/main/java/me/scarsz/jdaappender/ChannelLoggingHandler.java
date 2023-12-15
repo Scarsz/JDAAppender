@@ -250,7 +250,8 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
             } catch (InterruptedException e) {
                 JDA.Status status = channel.getJDA().getStatus();
                 if (status == JDA.Status.SHUTTING_DOWN || status == JDA.Status.SHUTDOWN) {
-                    // ignored
+                    // ignored, no-op
+                    return currentMessage;
                 } else {
                     throw new RuntimeException(e);
                 }
@@ -264,7 +265,7 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
         } catch (InterruptedException e) {
             JDA.Status status = channel.getJDA().getStatus();
             if (status == JDA.Status.SHUTTING_DOWN || status == JDA.Status.SHUTDOWN) {
-                // ignore exception
+                // ignored, no-op
                 return currentMessage;
             } else {
                 throw new RuntimeException(e);
