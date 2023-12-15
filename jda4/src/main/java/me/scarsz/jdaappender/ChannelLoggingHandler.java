@@ -11,6 +11,7 @@ import net.dv8tion.jda.api.entities.MessageChannel;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.exceptions.ErrorResponseException;
 import net.dv8tion.jda.api.requests.ErrorResponse;
+import net.dv8tion.jda.api.utils.MarkdownSanitizer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -320,7 +321,7 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
                 //TODO more SLF4J implementations
                 default:
                     System.err.println("SLF4J Logger factory " + logFactoryClass.getName() + " is not supported");
-                    enqueue(new LogItem("Appender", LogLevel.ERROR, "SLF4J Logger factory " + logFactoryClass.getName() + " is not supported"));
+                    enqueue(new LogItem(this, "Appender", LogLevel.ERROR, "SLF4J Logger factory " + logFactoryClass.getName() + " is not supported"));
             }
         } catch (Throwable ignored) {}
 
@@ -392,6 +393,11 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
             }
         });
         return this;
+    }
+
+    @Override
+    public String escapeMarkdown(String message) {
+        return MarkdownSanitizer.escape(message);
     }
 
 }

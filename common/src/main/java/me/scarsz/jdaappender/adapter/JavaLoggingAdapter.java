@@ -30,6 +30,7 @@ public class JavaLoggingAdapter extends Handler {
 
         if (level != null) {
             handler.enqueue(new LogItem(
+                    handler,
                     record.getLoggerName(),
                     record.getMillis(),
                     level,

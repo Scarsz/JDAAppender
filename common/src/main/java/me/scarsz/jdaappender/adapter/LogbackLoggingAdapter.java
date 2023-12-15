@@ -29,6 +29,7 @@ public class LogbackLoggingAdapter extends AppenderBase<ILoggingEvent> {
 
         if (level != null) {
             handler.enqueue(new LogItem(
+                    handler,
                     event.getLoggerName(),
                     event.getTimeStamp(),
                     level,

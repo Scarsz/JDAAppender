@@ -40,7 +40,7 @@ public class SystemLoggingAdapter {
         @Override
         public void println(String str) {
             super.println(str);
-            handler.enqueue(new LogItem(loggerName, System.currentTimeMillis(), level, str, null));
+            handler.enqueue(new LogItem(handler, loggerName, System.currentTimeMillis(), level, str, null));
         }
 
         @Override

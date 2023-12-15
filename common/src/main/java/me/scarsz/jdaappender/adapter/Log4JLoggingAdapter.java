@@ -59,6 +59,7 @@ public class Log4JLoggingAdapter extends AbstractAppender {
 
         if (level != null) {
             handler.enqueue(new LogItem(
+                    handler,
                     event.getLoggerName(),
                     LOG_EVENT_HAS_MILLIS ? event.getMillis() : System.currentTimeMillis(),
                     level,

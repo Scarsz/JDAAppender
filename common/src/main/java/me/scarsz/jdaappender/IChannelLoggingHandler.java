@@ -4,9 +4,11 @@ import java.util.concurrent.ScheduledFuture;
 
 public interface IChannelLoggingHandler {
 
+    void enqueue(LogItem logItem);
+
     void flush();
 
-    void enqueue(LogItem logItem);
+    String escapeMarkdown(String message);
 
     ScheduledFuture<?> getScheduledFuture();
 
