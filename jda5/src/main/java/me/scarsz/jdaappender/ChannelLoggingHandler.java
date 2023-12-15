@@ -26,7 +26,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
-public class ChannelLoggingHandler implements Flushable {
+public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable {
 
     @Getter private ScheduledExecutorService executor;
     @Getter private ScheduledFuture<?> scheduledFuture;
@@ -263,8 +263,6 @@ public class ChannelLoggingHandler implements Flushable {
         }
 
         TextChannel channel = (TextChannel) uncheckedChannel;
-        if (channel == null) throw new IllegalStateException("Channel unavailable");
-
         channel.createCopy()
                 .setPosition(channel.getPositionRaw())
                 .flatMap(textChannel -> {

@@ -5,15 +5,15 @@ import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.spi.ThrowableProxy;
 import ch.qos.logback.core.AppenderBase;
-import me.scarsz.jdaappender.ChannelLoggingHandler;
+import me.scarsz.jdaappender.IChannelLoggingHandler;
 import me.scarsz.jdaappender.LogItem;
 import me.scarsz.jdaappender.LogLevel;
 
 public class LogbackLoggingAdapter extends AppenderBase<ILoggingEvent> {
 
-    private final ChannelLoggingHandler handler;
+    private final IChannelLoggingHandler handler;
 
-    public LogbackLoggingAdapter(ChannelLoggingHandler handler, LoggerContext context) {
+    public LogbackLoggingAdapter(IChannelLoggingHandler handler, LoggerContext context) {
         this.handler = handler;
         setContext(context);
         this.start();

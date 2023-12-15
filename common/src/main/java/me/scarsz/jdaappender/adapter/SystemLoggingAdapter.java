@@ -1,7 +1,7 @@
 package me.scarsz.jdaappender.adapter;
 
 import lombok.Getter;
-import me.scarsz.jdaappender.ChannelLoggingHandler;
+import me.scarsz.jdaappender.IChannelLoggingHandler;
 import me.scarsz.jdaappender.LogItem;
 import me.scarsz.jdaappender.LogLevel;
 import org.jetbrains.annotations.NotNull;
@@ -13,7 +13,7 @@ public class SystemLoggingAdapter {
     @Getter private final LogStream outStream;
     @Getter private final LogStream errStream;
 
-    public SystemLoggingAdapter(ChannelLoggingHandler handler) {
+    public SystemLoggingAdapter(IChannelLoggingHandler handler) {
         this.outStream = new LogStream(System.out, "SOUT", LogLevel.INFO, handler);
         this.errStream = new LogStream(System.err, "SERR", LogLevel.ERROR, handler);
     }
@@ -22,9 +22,9 @@ public class SystemLoggingAdapter {
 
         private final String loggerName;
         private final LogLevel level;
-        private final ChannelLoggingHandler handler;
+        private final IChannelLoggingHandler handler;
 
-        public LogStream(PrintStream standardStream, String loggerName, LogLevel level, ChannelLoggingHandler handler) {
+        public LogStream(PrintStream standardStream, String loggerName, LogLevel level, IChannelLoggingHandler handler) {
             super(standardStream, true);
             this.loggerName = loggerName;
             this.level = level;

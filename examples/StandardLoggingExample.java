@@ -1,5 +1,3 @@
-package me.your.app;
-
 import me.scarsz.jdaappender.ChannelLoggingHandler;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;

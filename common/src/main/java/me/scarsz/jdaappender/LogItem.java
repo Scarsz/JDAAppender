@@ -3,7 +3,6 @@ package me.scarsz.jdaappender;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
-import net.dv8tion.jda.api.entities.Message;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -20,7 +19,7 @@ import java.util.regex.Pattern;
  */
 public class LogItem {
 
-    public static final int CLIPPING_MAX_LENGTH = Message.MAX_CONTENT_LENGTH - 20;
+    public static final int CLIPPING_MAX_LENGTH = 2000 - 20;
 
     @Getter private final String logger;
     @Getter private final long timestamp;
@@ -66,7 +65,7 @@ public class LogItem {
     }
 
     /**
-     * Clip the log item's message content if it exceeds {@link Message#MAX_CONTENT_LENGTH}
+     * Clip the log item's message content if it exceeds {@link LogItem#CLIPPING_MAX_LENGTH}
      * @param config the appender config
      * @return a new {@link LogItem} containing excess characters from this LogItem,
      *         null if no clipping was performed
@@ -77,7 +76,7 @@ public class LogItem {
     }
     /**
      * Clip the log item's message content into a maximum of specified number of log items, if it exceeds
-     * {@link Message#MAX_CONTENT_LENGTH}
+     * {@link LogItem#CLIPPING_MAX_LENGTH}
      * @param config the appender config
      * @param max the maximum amount of {@link LogItem}s to clip from this message
      * @return a set containing {@link LogItem}s formed from excess characters in this LogItem,
