@@ -360,7 +360,7 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
         Method removeAppenderMethod = rootLogger.getClass().getMethod("removeAppender", org.apache.logging.log4j.core.Appender.class);
 
         Object adapter = Class.forName("me.scarsz.jdaappender.adapter.Log4JLoggingAdapter")
-                .getConstructor(ChannelLoggingHandler.class)
+                .getConstructor(IChannelLoggingHandler.class)
                 .newInstance(this);
         addAppenderMethod.invoke(rootLogger, adapter);
 
