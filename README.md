@@ -32,10 +32,20 @@ ChannelLoggingHandler handler = new ChannelLoggingHandler(() -> jda.getTextChann
 </repository>
 ```
 ```xml
+<!-- JDA 5 -->
 <dependency>
-    <groupId>me.scarsz</groupId>
-    <artifactId>jdaappender</artifactId>
-    <version>1.0.2-SNAPSHOT</version>
+    <groupId>me.scarsz.jdaappender</groupId>
+    <artifactId>jda5</artifactId>
+    <version>1.2.0-SNAPSHOT</version>
+</dependency>
+
+    or
+
+<!-- JDA 4 -->
+<dependency>
+    <groupId>me.scarsz.jdaappender</groupId>
+    <artifactId>jda4</artifactId>
+    <version>1.2.0-SNAPSHOT</version>
 </dependency>
 ```
 

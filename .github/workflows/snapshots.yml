@@ -27,4 +27,4 @@ jobs:
         env:
           NEXUS_USER: ${{ secrets.NEXUS_USER }}
           NEXUS_PASS: ${{ secrets.NEXUS_PASS }}
-        run: mvn --batch-mode --update-snapshots --settings deploy.xml clean deploy
+        run: mvn --batch-mode --update-snapshots --settings deploy.xml clean source:jar deploy

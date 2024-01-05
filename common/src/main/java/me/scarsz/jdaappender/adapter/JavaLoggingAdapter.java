@@ -1,6 +1,6 @@
 package me.scarsz.jdaappender.adapter;
 
-import me.scarsz.jdaappender.ChannelLoggingHandler;
+import me.scarsz.jdaappender.IChannelLoggingHandler;
 import me.scarsz.jdaappender.LogItem;
 import me.scarsz.jdaappender.LogLevel;
 
@@ -14,9 +14,9 @@ import java.util.logging.LogRecord;
 
 public class JavaLoggingAdapter extends Handler {
 
-    private final ChannelLoggingHandler handler;
+    private final IChannelLoggingHandler handler;
 
-    public JavaLoggingAdapter(ChannelLoggingHandler handler) {
+    public JavaLoggingAdapter(IChannelLoggingHandler handler) {
         this.handler = handler;
     }
 
@@ -30,6 +30,7 @@ public class JavaLoggingAdapter extends Handler {
 
         if (level != null) {
             handler.enqueue(new LogItem(
+                    handler,
                     record.getLoggerName(),
                     record.getMillis(),
                     level,

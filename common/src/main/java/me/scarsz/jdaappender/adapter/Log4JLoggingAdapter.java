@@ -1,6 +1,6 @@
 package me.scarsz.jdaappender.adapter;
 
-import me.scarsz.jdaappender.ChannelLoggingHandler;
+import me.scarsz.jdaappender.IChannelLoggingHandler;
 import me.scarsz.jdaappender.LogItem;
 import me.scarsz.jdaappender.LogLevel;
 import org.apache.logging.log4j.Level;
@@ -42,9 +42,9 @@ public class Log4JLoggingAdapter extends AbstractAppender {
         }
     }
 
-    private final ChannelLoggingHandler handler;
+    private final IChannelLoggingHandler handler;
 
-    public Log4JLoggingAdapter(ChannelLoggingHandler handler) {
+    public Log4JLoggingAdapter(IChannelLoggingHandler handler) {
         super("JDAAppender", null, PATTERN_LAYOUT, false);
         this.handler = handler;
     }
@@ -59,6 +59,7 @@ public class Log4JLoggingAdapter extends AbstractAppender {
 
         if (level != null) {
             handler.enqueue(new LogItem(
+                    handler,
                     event.getLoggerName(),
                     LOG_EVENT_HAS_MILLIS ? event.getMillis() : System.currentTimeMillis(),
                     level,

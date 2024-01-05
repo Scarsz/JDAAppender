@@ -11,6 +11,7 @@ import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.exceptions.ErrorResponseException;
 import net.dv8tion.jda.api.requests.ErrorResponse;
+import net.dv8tion.jda.api.utils.MarkdownSanitizer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -26,7 +27,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
-public class ChannelLoggingHandler implements Flushable {
+public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable {
 
     @Getter private ScheduledExecutorService executor;
     @Getter private ScheduledFuture<?> scheduledFuture;
@@ -133,7 +134,7 @@ public class ChannelLoggingHandler implements Flushable {
                     }
 
                     if (!canFit(logItem)) {
-                        if (stack.size() == 0) throw new IllegalStateException("Can't fit LogItem into empty stack: " + logItem);
+                        if (stack.isEmpty()) throw new IllegalStateException("Can't fit LogItem into empty stack: " + logItem);
                         dumpStack();
                     }
 
@@ -141,7 +142,7 @@ public class ChannelLoggingHandler implements Flushable {
                     dirtyBit.set(true);
                 }
 
-                if (dirtyBit.get() && stack.size() > 0) {
+                if (dirtyBit.get() && !stack.isEmpty()) {
                     currentMessage = updateMessage();
                     dirtyBit.set(false);
                 }
@@ -155,7 +156,7 @@ public class ChannelLoggingHandler implements Flushable {
     @Synchronized("stack")
     public void dumpStack() {
         try {
-            if (stack.size() > 0) updateMessage();
+            if (!stack.isEmpty()) updateMessage();
         } catch (IllegalStateException ignored) {}
         stack.clear();
         currentMessage = null;
@@ -200,7 +201,7 @@ public class ChannelLoggingHandler implements Flushable {
         StringJoiner joiner;
 
         synchronized (stack) {
-            if (stack.size() == 0) throw new IllegalStateException("No messages on stack");
+            if (stack.isEmpty()) throw new IllegalStateException("No messages on stack");
 
             channel = channelSupplier.get();
             if (channel == null) throw new IllegalStateException("Channel unavailable");
@@ -263,8 +264,6 @@ public class ChannelLoggingHandler implements Flushable {
         }
 
         TextChannel channel = (TextChannel) uncheckedChannel;
-        if (channel == null) throw new IllegalStateException("Channel unavailable");
-
         channel.createCopy()
                 .setPosition(channel.getPositionRaw())
                 .flatMap(textChannel -> {
@@ -322,7 +321,7 @@ public class ChannelLoggingHandler implements Flushable {
                 //TODO more SLF4J implementations
                 default:
                     System.err.println("SLF4J Logger factory " + logFactoryClass.getName() + " is not supported");
-                    enqueue(new LogItem("Appender", LogLevel.ERROR, "SLF4J Logger factory " + logFactoryClass.getName() + " is not supported"));
+                    enqueue(new LogItem(this, "Appender", LogLevel.ERROR, "SLF4J Logger factory " + logFactoryClass.getName() + " is not supported"));
             }
         } catch (Throwable ignored) {}
 
@@ -361,7 +360,7 @@ public class ChannelLoggingHandler implements Flushable {
         Method removeAppenderMethod = rootLogger.getClass().getMethod("removeAppender", org.apache.logging.log4j.core.Appender.class);
 
         Object adapter = Class.forName("me.scarsz.jdaappender.adapter.Log4JLoggingAdapter")
-                .getConstructor(ChannelLoggingHandler.class)
+                .getConstructor(IChannelLoggingHandler.class)
                 .newInstance(this);
         addAppenderMethod.invoke(rootLogger, adapter);
 
@@ -394,6 +393,11 @@ public class ChannelLoggingHandler implements Flushable {
             }
         });
         return this;
+    }
+
+    @Override
+    public String escapeMarkdown(String message) {
+        return MarkdownSanitizer.escape(message);
     }
 
 }
