@@ -246,6 +246,7 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
                     throw e;
                 }
             } catch (ExecutionException e) {
+                currentMessage = null;
                 throw new RuntimeException(e);
             } catch (InterruptedException e) {
                 JDA.Status status = channel.getJDA().getStatus();
