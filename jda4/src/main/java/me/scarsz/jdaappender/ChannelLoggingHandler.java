@@ -239,15 +239,11 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
         if (currentMessage != null) {
             try {
                 return currentMessage.editMessage(full).submit().get();
-            } catch (ErrorResponseException e) {
-                if (e.getErrorResponse() == ErrorResponse.UNKNOWN_MESSAGE) {
-                    currentMessage = null;
-                } else {
-                    throw e;
-                }
             } catch (ExecutionException e) {
                 currentMessage = null;
-                throw new RuntimeException(e);
+                if (!(e.getCause() instanceof ErrorResponseException)) {
+                    throw new RuntimeException(e);
+                }
             } catch (InterruptedException e) {
                 JDA.Status status = channel.getJDA().getStatus();
                 if (status == JDA.Status.SHUTTING_DOWN || status == JDA.Status.SHUTDOWN) {
