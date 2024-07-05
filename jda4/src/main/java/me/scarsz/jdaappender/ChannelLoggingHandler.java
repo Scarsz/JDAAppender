@@ -249,7 +249,7 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
                 throw new RuntimeException(e);
             } catch (InterruptedException e) {
                 JDA.Status status = channel.getJDA().getStatus();
-                if (status == JDA.Status.SHUTTING_DOWN || status == JDA.Status.SHUTDOWN) {
+                if (executor == null || executor.isShutdown() || status == JDA.Status.SHUTTING_DOWN || status == JDA.Status.SHUTDOWN) {
                     // ignored, no-op
                     return currentMessage;
                 } else {
@@ -264,7 +264,7 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
             throw new RuntimeException(e);
         } catch (InterruptedException e) {
             JDA.Status status = channel.getJDA().getStatus();
-            if (status == JDA.Status.SHUTTING_DOWN || status == JDA.Status.SHUTDOWN) {
+            if (executor == null || executor.isShutdown() || status == JDA.Status.SHUTTING_DOWN || status == JDA.Status.SHUTDOWN) {
                 // ignored, no-op
                 return currentMessage;
             } else {
@@ -302,11 +302,12 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
      */
     public void shutdownExecutor() {
         if (scheduledFuture != null) {
-            scheduledFuture.cancel(true);
+            scheduledFuture.cancel(false);
             scheduledFuture = null;
         }
         if (executor != null) {
             executor.shutdown();
+            executor.awaitTermination();
             executor = null;
         }
     }
