@@ -239,17 +239,17 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
         if (currentMessage != null) {
             try {
                 return currentMessage.editMessage(full).submit().get();
-            } catch (ErrorResponseException e) {
-                if (e.getErrorResponse() == ErrorResponse.UNKNOWN_MESSAGE) {
+            } catch (ExecutionException e) {
+                Throwable cause = e.getCause();
+                if (cause instanceof ErrorResponseException
+                        && ((ErrorResponseException) cause).getErrorResponse() == ErrorResponse.UNKNOWN_MESSAGE) {
                     currentMessage = null;
                 } else {
-                    throw e;
+                    throw new RuntimeException(cause);
                 }
-            } catch (ExecutionException e) {
-                throw new RuntimeException(e);
             } catch (InterruptedException e) {
                 JDA.Status status = channel.getJDA().getStatus();
-                if (status == JDA.Status.SHUTTING_DOWN || status == JDA.Status.SHUTDOWN) {
+                if (executor == null || executor.isShutdown() || status == JDA.Status.SHUTTING_DOWN || status == JDA.Status.SHUTDOWN) {
                     // ignored, no-op
                     return currentMessage;
                 } else {
@@ -264,7 +264,7 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
             throw new RuntimeException(e);
         } catch (InterruptedException e) {
             JDA.Status status = channel.getJDA().getStatus();
-            if (status == JDA.Status.SHUTTING_DOWN || status == JDA.Status.SHUTDOWN) {
+            if (executor == null || executor.isShutdown() || status == JDA.Status.SHUTTING_DOWN || status == JDA.Status.SHUTDOWN) {
                 // ignored, no-op
                 return currentMessage;
             } else {
@@ -302,11 +302,16 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
      */
     public void shutdownExecutor() {
         if (scheduledFuture != null) {
-            scheduledFuture.cancel(true);
+            scheduledFuture.cancel(false);
             scheduledFuture = null;
         }
         if (executor != null) {
             executor.shutdown();
+            try {
+                executor.awaitTermination(5, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                // ignore, it's fine if the last tidbit of console output doesn't get sent
+            }
             executor = null;
         }
     }
