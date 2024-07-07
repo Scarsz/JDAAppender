@@ -307,7 +307,11 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
         }
         if (executor != null) {
             executor.shutdown();
-            executor.awaitTermination();
+            try {
+                executor.awaitTermination(5, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                // ignore, it's fine if the last tidbit of console output doesn't get sent
+            }
             executor = null;
         }
     }
