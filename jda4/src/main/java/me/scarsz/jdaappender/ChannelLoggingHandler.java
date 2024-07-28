@@ -16,6 +16,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.Flushable;
+import java.io.InterruptedIOException;
 import java.io.PrintStream;
 import java.lang.reflect.Method;
 import java.util.*;
@@ -260,9 +261,15 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
 
         try {
             return channel.sendMessage(full).submit().get();
-        } catch (ExecutionException e) {
+        } catch (Exception e) {
+        Throwable ex = e;
+        while (ex != null) {
+            if (ex instanceof InterruptedIOException || ex.getCause() instanceof InterruptedException) return;
+            ex = ex.getCause();
+        }
+        if (e instanceof ExecutionException) {
             throw new RuntimeException(e);
-        } catch (InterruptedException e) {
+        if (e instanceof InterruptedException) {
             JDA.Status status = channel.getJDA().getStatus();
             if (executor == null || executor.isShutdown() || status == JDA.Status.SHUTTING_DOWN || status == JDA.Status.SHUTDOWN) {
                 // ignored, no-op
