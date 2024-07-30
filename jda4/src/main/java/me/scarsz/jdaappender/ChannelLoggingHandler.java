@@ -264,7 +264,7 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
         } catch (Exception e) {
             Throwable ex = e;
             while (ex != null) {
-                if (ex instanceof InterruptedIOException || ex.getCause() instanceof InterruptedException) return;
+                if (ex instanceof InterruptedIOException || ex instanceof InterruptedException) return;
                 ex = ex.getCause();
             }
             if (e instanceof ExecutionException) {
