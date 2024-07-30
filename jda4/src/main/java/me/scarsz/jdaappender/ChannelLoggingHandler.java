@@ -241,24 +241,21 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
             try {
                 return currentMessage.editMessage(full).submit().get();
             } catch (Exception e) {
-                Throwable ex = e;
-                while (ex != null) {
-                    if (ex instanceof InterruptedIOException || ex instanceof InterruptedException) break;
-                    ex = ex.getCause();
+                if (this.isInterruptedException(e)) return currentMessage;
+                if (e.getCause() instanceof ErrorResponseException
+                        && ((ErrorResponseException) e.getCause()).getErrorResponse() == ErrorResponse.UNKNOWN_MESSAGE) {
+                    currentMessage = null;
+                } else {
+                    throw new RuntimeException(e.getCause());
                 }
-                return currentMessage;
             }
         }
 
         try {
             return channel.sendMessage(full).submit().get();
         } catch (Exception e) {
-            Throwable ex = e;
-            while (ex != null) {
-                if (ex instanceof InterruptedIOException || ex instanceof InterruptedException) break;
-                ex = ex.getCause();
-            }
-            return currentMessage;
+            if (this.isInterruptedException(e)) return currentMessage;
+            else throw new RuntimeException(e);
         }
     }
 
