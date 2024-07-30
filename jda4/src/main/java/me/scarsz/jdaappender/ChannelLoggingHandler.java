@@ -240,22 +240,13 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
         if (currentMessage != null) {
             try {
                 return currentMessage.editMessage(full).submit().get();
-            } catch (ExecutionException e) {
-                Throwable cause = e.getCause();
-                if (cause instanceof ErrorResponseException
-                        && ((ErrorResponseException) cause).getErrorResponse() == ErrorResponse.UNKNOWN_MESSAGE) {
-                    currentMessage = null;
-                } else {
-                    throw new RuntimeException(cause);
+            } catch (Exception e) {
+                Throwable ex = e;
+                while (ex != null) {
+                    if (ex instanceof InterruptedIOException || ex instanceof InterruptedException) break;
+                    ex = ex.getCause();
                 }
-            } catch (InterruptedException e) {
-                JDA.Status status = channel.getJDA().getStatus();
-                if (executor == null || executor.isShutdown() || status == JDA.Status.SHUTTING_DOWN || status == JDA.Status.SHUTDOWN) {
-                    // ignored, no-op
-                    return currentMessage;
-                } else {
-                    throw new RuntimeException(e);
-                }
+                return currentMessage;
             }
         }
 
@@ -264,20 +255,11 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
         } catch (Exception e) {
             Throwable ex = e;
             while (ex != null) {
-                if (ex instanceof InterruptedIOException || ex instanceof InterruptedException) return;
+                if (ex instanceof InterruptedIOException || ex instanceof InterruptedException) break;
                 ex = ex.getCause();
             }
-            if (e instanceof ExecutionException) {
-                throw new RuntimeException(e);
-                if (e instanceof InterruptedException) {
-                    JDA.Status status = channel.getJDA().getStatus();
-                    if (executor == null || executor.isShutdown() || status == JDA.Status.SHUTTING_DOWN || status == JDA.Status.SHUTDOWN) {
-                        // ignored, no-op
-                        return currentMessage;
-                    } else {
-                        throw new RuntimeException(e);
-                    }
-                }
+            return currentMessage;
+        }
     }
 
     /**
