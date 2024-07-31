@@ -239,7 +239,8 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
         if (currentMessage != null) {
             try {
                 return currentMessage.editMessage(full).submit().get();
-            } catch (ExecutionException e) {
+            } catch (Exception e) {
+                if (this.isInterruptedException(e)) return currentMessage;
                 Throwable cause = e.getCause();
                 if (cause instanceof ErrorResponseException
                         && ((ErrorResponseException) cause).getErrorResponse() == ErrorResponse.UNKNOWN_MESSAGE) {
@@ -247,29 +248,14 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
                 } else {
                     throw new RuntimeException(cause);
                 }
-            } catch (InterruptedException e) {
-                JDA.Status status = channel.getJDA().getStatus();
-                if (executor == null || executor.isShutdown() || status == JDA.Status.SHUTTING_DOWN || status == JDA.Status.SHUTDOWN) {
-                    // ignored, no-op
-                    return currentMessage;
-                } else {
-                    throw new RuntimeException(e);
-                }
             }
         }
 
         try {
             return channel.sendMessage(full).submit().get();
-        } catch (ExecutionException e) {
+        } catch (Exception e) {
+            if (this.isInterruptedException(e)) return currentMessage;
             throw new RuntimeException(e);
-        } catch (InterruptedException e) {
-            JDA.Status status = channel.getJDA().getStatus();
-            if (executor == null || executor.isShutdown() || status == JDA.Status.SHUTTING_DOWN || status == JDA.Status.SHUTDOWN) {
-                // ignored, no-op
-                return currentMessage;
-            } else {
-                throw new RuntimeException(e);
-            }
         }
     }
 
