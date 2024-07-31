@@ -16,7 +16,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.Flushable;
-import java.io.InterruptedIOException;
 import java.io.PrintStream;
 import java.lang.reflect.Method;
 import java.util.*;
