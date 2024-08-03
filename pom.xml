@@ -6,7 +6,7 @@
 
     <groupId>me.scarsz.jdaappender</groupId>
     <artifactId>parent</artifactId>
-    <version>1.2.2</version>
+    <version>1.2.3-SNAPSHOT</version>
 
     <packaging>pom</packaging>
     <modules>
@@ -63,7 +63,7 @@
             <dependency>
                 <groupId>me.scarsz.jdaappender</groupId>
                 <artifactId>common</artifactId>
-                <version>1.2.2</version>
+                <version>1.2.3-SNAPSHOT</version>
             </dependency>
 
             <dependency>
