@@ -66,7 +66,7 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
     /**
      * RegEx pattern used to check if a URL contains a link for use with {@link HandlerConfig#isAllowLinkEmbeds()}
      */
-    private static final Pattern URL_PATTERN = Pattern.compile("https?://\\S+");
+    private static final Pattern URL_PATTERN = Pattern.compile("https?:\\/\\/((?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]:?\\d*\\/?[a-zA-Z0-9_\\/\\-#.]*\\??[a-zA-Z0-9\\-_~:\\/?#\\[\\]@!$&'()*+,;=%.]*)");
 
     @Getter private final HandlerConfig config = new HandlerConfig();
     @Getter private final Deque<LogItem> messageQueue = new LinkedList<>();
@@ -236,49 +236,36 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
         // safeguard against empty lines
         while (full.contains("\n\n")) full = full.replace("\n\n", "\n");
 
-        boolean retry = true;
-        int attempts = 0;
-        while (retry) {
-            retry = false;
-            try {
+        try {
+            return sendOrEditMessage(full, channel);
+        } catch (ErrorResponseException errorResponseException) {
+            if (errorResponseException.getErrorResponse() == ErrorResponse.UNKNOWN_MESSAGE) {
+                currentMessage = null;
                 return sendOrEditMessage(full, channel);
-            } catch (Exception e) {
-                if (this.isInterruptedException(e)) return currentMessage;
-
-                Throwable cause = e.getCause();
-                if (cause instanceof ErrorResponseException) {
-                    ErrorResponseException errorResponseException = (ErrorResponseException) cause;
-
-                    if (attempts >= 2) {
-                        throw new RuntimeException("Too many attempts were made", cause);
-                    }
-
-                    if (errorResponseException.getErrorResponse() == ErrorResponse.UNKNOWN_MESSAGE) {
-                        currentMessage = null;
-                        retry = true;
-                        attempts++;
-                        continue;
-                    } else if (errorResponseException.getErrorResponse() == ErrorResponse.MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER) {
-                        full = URL_PATTERN.matcher(full).replaceAll("$1");
-                        retry = true;
-                        attempts++;
-                        continue;
-                    } else {
-                        throw new RuntimeException(cause);
-                    }
-                }
-
-                throw new RuntimeException(e);
+            } else if (errorResponseException.getErrorResponse() == ErrorResponse.MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER) {
+                full = URL_PATTERN.matcher(full).replaceAll("$1");
+                return sendOrEditMessage(full, channel);
+            } else {
+                throw new RuntimeException(errorResponseException);
             }
         }
-        throw new RuntimeException("This should never throw");
     }
 
-    private Message sendOrEditMessage(String full, MessageChannel channel) throws InterruptedException, ExecutionException {
-        if (currentMessage != null) {
-            return currentMessage.editMessage(full).submit().get();
-        } else {
-            return channel.sendMessage(full).submit().get();
+    private Message sendOrEditMessage(String full, MessageChannel channel) throws ErrorResponseException {
+        try {
+            if (currentMessage != null) {
+                return currentMessage.editMessage(full).submit().get();
+            } else {
+                return channel.sendMessage(full).submit().get();
+            }
+        } catch (ExecutionException | InterruptedException e) {
+            if (this.isInterruptedException(e)) return currentMessage;
+
+            if (e.getCause() instanceof ErrorResponseException) {
+                throw (ErrorResponseException) e.getCause();
+            }
+
+            throw new RuntimeException(e);
         }
     }
 
