@@ -236,26 +236,49 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
         // safeguard against empty lines
         while (full.contains("\n\n")) full = full.replace("\n\n", "\n");
 
-        if (currentMessage != null) {
+        boolean retry = true;
+        int attempts = 0;
+        while (retry) {
+            retry = false;
             try {
-                return currentMessage.editMessage(full).submit().get();
+                return sendOrEditMessage(full, channel);
             } catch (Exception e) {
                 if (this.isInterruptedException(e)) return currentMessage;
+
                 Throwable cause = e.getCause();
-                if (cause instanceof ErrorResponseException
-                        && ((ErrorResponseException) cause).getErrorResponse() == ErrorResponse.UNKNOWN_MESSAGE) {
-                    currentMessage = null;
-                } else {
-                    throw new RuntimeException(cause);
+                if (cause instanceof ErrorResponseException) {
+                    ErrorResponseException errorResponseException = (ErrorResponseException) cause;
+
+                    if (attempts >= 2) {
+                        throw new RuntimeException("Too many attempts were made", cause);
+                    }
+
+                    if (errorResponseException.getErrorResponse() == ErrorResponse.UNKNOWN_MESSAGE) {
+                        currentMessage = null;
+                        retry = true;
+                        attempts++;
+                        continue;
+                    } else if (errorResponseException.getErrorResponse() == ErrorResponse.MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER) {
+                        full = URL_PATTERN.matcher(full).replaceAll("$1");
+                        retry = true;
+                        attempts++;
+                        continue;
+                    } else {
+                        throw new RuntimeException(cause);
+                    }
                 }
+
+                throw new RuntimeException(e);
             }
         }
+        throw new RuntimeException("This should never throw");
+    }
 
-        try {
+    private Message sendOrEditMessage(String full, MessageChannel channel) throws InterruptedException, ExecutionException {
+        if (currentMessage != null) {
+            return currentMessage.editMessage(full).submit().get();
+        } else {
             return channel.sendMessage(full).submit().get();
-        } catch (Exception e) {
-            if (this.isInterruptedException(e)) return currentMessage;
-            throw new RuntimeException(e);
         }
     }
 
