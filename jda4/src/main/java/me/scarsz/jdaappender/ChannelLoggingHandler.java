@@ -66,7 +66,12 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
     /**
      * RegEx pattern used to check if a URL contains a link for use with {@link HandlerConfig#isAllowLinkEmbeds()}
      */
-    private static final Pattern URL_PATTERN = Pattern.compile("https?://\\S+");
+    private static final Pattern URL_PATTERN = Pattern.compile("https?://(\\S+)");
+
+    /**
+     * Error code for "Message blocked by harmful links filter" ErrorResponse
+     */
+    private static final int MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER_ERROR_CODE = 240000;
 
     @Getter private final HandlerConfig config = new HandlerConfig();
     @Getter private final Deque<LogItem> messageQueue = new LinkedList<>();
@@ -236,26 +241,49 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
         // safeguard against empty lines
         while (full.contains("\n\n")) full = full.replace("\n\n", "\n");
 
-        if (currentMessage != null) {
+        boolean retry = true;
+        int attempts = 0;
+        while (retry) {
+            retry = false;
             try {
-                return currentMessage.editMessage(full).submit().get();
+                return sendOrEditMessage(full, channel);
             } catch (Exception e) {
                 if (this.isInterruptedException(e)) return currentMessage;
+
                 Throwable cause = e.getCause();
-                if (cause instanceof ErrorResponseException
-                        && ((ErrorResponseException) cause).getErrorResponse() == ErrorResponse.UNKNOWN_MESSAGE) {
-                    currentMessage = null;
-                } else {
-                    throw new RuntimeException(e.getCause());
+                if (cause instanceof ErrorResponseException) {
+                    ErrorResponseException errorResponseException = (ErrorResponseException) cause;
+
+                    if (attempts >= 2) {
+                        throw new RuntimeException("Too many attempts were made", cause);
+                    }
+
+                    if (errorResponseException.getErrorResponse() == ErrorResponse.UNKNOWN_MESSAGE) {
+                        currentMessage = null;
+                        retry = true;
+                        attempts++;
+                        continue;
+                    } else if (errorResponseException.getErrorCode() == MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER_ERROR_CODE) {
+                        full = URL_PATTERN.matcher(full).replaceAll("$1");
+                        retry = true;
+                        attempts++;
+                        continue;
+                    } else {
+                        throw new RuntimeException(cause);
+                    }
                 }
+
+                throw new RuntimeException(e);
             }
         }
+        throw new RuntimeException("This should never throw");
+    }
 
-        try {
+    private Message sendOrEditMessage(String full, MessageChannel channel) throws InterruptedException, ExecutionException {
+        if (currentMessage != null) {
+            return currentMessage.editMessage(full).submit().get();
+        } else {
             return channel.sendMessage(full).submit().get();
-        } catch (Exception e) {
-            if (this.isInterruptedException(e)) return currentMessage;
-            throw new RuntimeException(e);
         }
     }
 
