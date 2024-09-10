@@ -246,7 +246,16 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
         } catch (ErrorResponseException errorResponseException) {
             if (errorResponseException.getErrorResponse() == ErrorResponse.UNKNOWN_MESSAGE) {
                 currentMessage = null;
-                return sendOrEditMessage(full, channel);
+                // in case the message was deleted and the original message had a harmful link, catch the error again
+                try {
+                    return sendOrEditMessage(full, channel);
+                } catch (ErrorResponseException errorResponseException2) {
+                    if (errorResponseException2.getErrorCode() == MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER_ERROR_CODE) {
+                        full = URL_PATTERN.matcher(full).replaceAll("$1");
+                        return sendOrEditMessage(full, channel);
+                    }
+                    throw new RuntimeException(errorResponseException2);
+                }
             } else if (errorResponseException.getErrorCode() == MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER_ERROR_CODE) {
                 full = URL_PATTERN.matcher(full).replaceAll("$1");
                 return sendOrEditMessage(full, channel);
@@ -266,8 +275,11 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
         } catch (ExecutionException | InterruptedException e) {
             if (this.isInterruptedException(e)) return currentMessage;
 
-            if (e.getCause() instanceof ErrorResponseException) {
-                throw (ErrorResponseException) e.getCause();
+            Throwable cause = e.getCause();
+            if (cause instanceof ErrorResponseException) {
+
+
+                throw (ErrorResponseException) cause;
             }
 
             throw new RuntimeException(e);
