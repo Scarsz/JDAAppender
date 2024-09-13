@@ -237,17 +237,27 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
         while (full.contains("\n\n")) full = full.replace("\n\n", "\n");
 
         try {
-            return sendOrEditMessage(full, channel);
-        } catch (ErrorResponseException errorResponseException) {
-            if (errorResponseException.getErrorResponse() == ErrorResponse.UNKNOWN_MESSAGE) {
-                currentMessage = null;
-                return sendOrEditMessage(full, channel);
-            } else if (errorResponseException.getErrorResponse() == ErrorResponse.MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER) {
+            // Make at most two attempts to process message.
+            // If the message is missing on the first attempt, try again.
+            // If the message runs into anything else, throw to higher catch
+            for (int i = 0; i < 2; i++) {
+                try {
+                    return sendOrEditMessage(full, channel);
+                } catch (ErrorResponseException ex) {
+                    if (i == 0 && ex.getErrorResponse() == ErrorResponse.UNKNOWN_MESSAGE) {
+                        currentMessage = null;
+                        continue;
+                    }
+                    throw ex;
+                }
+            }
+            throw new RuntimeException("Unexpected error: Failed to update message for unknown reason.");
+        } catch (ErrorResponseException ex) {
+            if (ex.getErrorResponse() == ErrorResponse.MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER) {
                 full = URL_PATTERN.matcher(full).replaceAll("$1");
                 return sendOrEditMessage(full, channel);
-            } else {
-                throw new RuntimeException(errorResponseException);
             }
+            throw ex;
         }
     }
 
@@ -261,8 +271,9 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
         } catch (ExecutionException | InterruptedException e) {
             if (this.isInterruptedException(e)) return currentMessage;
 
-            if (e.getCause() instanceof ErrorResponseException) {
-                throw (ErrorResponseException) e.getCause();
+            Throwable cause = e.getCause();
+            if (cause instanceof ErrorResponseException) {
+                throw (ErrorResponseException) cause;
             }
 
             throw new RuntimeException(e);
