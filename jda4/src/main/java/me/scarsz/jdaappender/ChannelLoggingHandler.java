@@ -242,26 +242,27 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
         while (full.contains("\n\n")) full = full.replace("\n\n", "\n");
 
         try {
-            return sendOrEditMessage(full, channel);
-        } catch (ErrorResponseException errorResponseException) {
-            if (errorResponseException.getErrorResponse() == ErrorResponse.UNKNOWN_MESSAGE) {
-                currentMessage = null;
-                // in case the message was deleted and the original message had a harmful link, catch the error again
+            // Make at most two attempts to process message.
+            // If the message is missing on the first attempt, try again.
+            // If the message runs into anything else, throw to higher catch
+            for (int i = 0; i < 2; i++) {
                 try {
                     return sendOrEditMessage(full, channel);
-                } catch (ErrorResponseException errorResponseException2) {
-                    if (errorResponseException2.getErrorCode() == MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER_ERROR_CODE) {
-                        full = URL_PATTERN.matcher(full).replaceAll("$1");
-                        return sendOrEditMessage(full, channel);
+                } catch (ErrorResponseException ex) {
+                    if (i == 0 && ex.getErrorResponse() == ErrorResponse.UNKNOWN_MESSAGE) {
+                        currentMessage = null;
+                        continue;
                     }
-                    throw new RuntimeException(errorResponseException2);
+                    throw ex;
                 }
-            } else if (errorResponseException.getErrorCode() == MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER_ERROR_CODE) {
+            }
+            throw new RuntimeException("Unexpected error: Failed to update message for unknown reason.");
+        } catch (ErrorResponseException ex) {
+            if (ex.getErrorCode() == MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER_ERROR_CODE) {
                 full = URL_PATTERN.matcher(full).replaceAll("$1");
                 return sendOrEditMessage(full, channel);
-            } else {
-                throw new RuntimeException(errorResponseException);
             }
+            throw ex;
         }
     }
 
@@ -277,8 +278,6 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
 
             Throwable cause = e.getCause();
             if (cause instanceof ErrorResponseException) {
-
-
                 throw (ErrorResponseException) cause;
             }
 
