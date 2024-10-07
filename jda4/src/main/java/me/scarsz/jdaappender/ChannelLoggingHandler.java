@@ -66,7 +66,12 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
     /**
      * RegEx pattern used to check if a URL contains a link for use with {@link HandlerConfig#isAllowLinkEmbeds()}
      */
-    private static final Pattern URL_PATTERN = Pattern.compile("https?://\\S+");
+    private static final Pattern URL_PATTERN = Pattern.compile("https?:\\/\\/((?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]:?\\d*\\/?[a-zA-Z0-9_\\/\\-#.]*\\??[a-zA-Z0-9\\-_~:\\/?#\\[\\]@!$&'()*+,;=%.]*)");
+
+    /**
+     * Error code for "Message blocked by harmful links filter" ErrorResponse
+     */
+    private static final int MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER_ERROR_CODE = 240000;
 
     @Getter private final HandlerConfig config = new HandlerConfig();
     @Getter private final Deque<LogItem> messageQueue = new LinkedList<>();
@@ -236,25 +241,46 @@ public class ChannelLoggingHandler implements IChannelLoggingHandler, Flushable 
         // safeguard against empty lines
         while (full.contains("\n\n")) full = full.replace("\n\n", "\n");
 
-        if (currentMessage != null) {
-            try {
-                return currentMessage.editMessage(full).submit().get();
-            } catch (Exception e) {
-                if (this.isInterruptedException(e)) return currentMessage;
-                Throwable cause = e.getCause();
-                if (cause instanceof ErrorResponseException
-                        && ((ErrorResponseException) cause).getErrorResponse() == ErrorResponse.UNKNOWN_MESSAGE) {
-                    currentMessage = null;
-                } else {
-                    throw new RuntimeException(e.getCause());
+        try {
+            // Make at most two attempts to process message.
+            // If the message is missing on the first attempt, try again.
+            // If the message runs into anything else, throw to higher catch
+            for (int i = 0; i < 2; i++) {
+                try {
+                    return sendOrEditMessage(full, channel);
+                } catch (ErrorResponseException ex) {
+                    if (i == 0 && ex.getErrorResponse() == ErrorResponse.UNKNOWN_MESSAGE) {
+                        currentMessage = null;
+                        continue;
+                    }
+                    throw ex;
                 }
             }
+            throw new RuntimeException("Unexpected error: Failed to update message for unknown reason.");
+        } catch (ErrorResponseException ex) {
+            if (ex.getErrorCode() == MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER_ERROR_CODE) {
+                full = URL_PATTERN.matcher(full).replaceAll("$1");
+                return sendOrEditMessage(full, channel);
+            }
+            throw ex;
         }
+    }
 
+    private Message sendOrEditMessage(String full, MessageChannel channel) throws ErrorResponseException {
         try {
-            return channel.sendMessage(full).submit().get();
-        } catch (Exception e) {
+            if (currentMessage != null) {
+                return currentMessage.editMessage(full).submit().get();
+            } else {
+                return channel.sendMessage(full).submit().get();
+            }
+        } catch (ExecutionException | InterruptedException e) {
             if (this.isInterruptedException(e)) return currentMessage;
+
+            Throwable cause = e.getCause();
+            if (cause instanceof ErrorResponseException) {
+                throw (ErrorResponseException) cause;
+            }
+
             throw new RuntimeException(e);
         }
     }
