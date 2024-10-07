@@ -6,7 +6,7 @@
     <parent>
         <groupId>me.scarsz.jdaappender</groupId>
         <artifactId>parent</artifactId>
-        <version>1.2.2</version>
+        <version>1.2.3</version>
     </parent>
 
     <artifactId>jda4</artifactId>
